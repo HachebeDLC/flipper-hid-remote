@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flipper HID Remote</title>
+</head>
+<body>
+    <h1>Flipper HID Remote Dashboard</h1>
+    <button id="connectBtn">Connect to Flipper</button>
+    <button id="sendBtn" disabled>Send Test Key ('a')</button>
+    
+    <script src="app.js"></script>
+    <script>
+        document.getElementById('connectBtn').addEventListener('click', async () => {
+            const success = await connectToFlipper();
+            if (success) {
+                document.getElementById('sendBtn').disabled = false;
+                document.getElementById('connectBtn').textContent = 'Connected';
+            }
+        });
+        
+        document.getElementById('sendBtn').addEventListener('click', () => {
+            console.log('Sending HID command: key "a"');
+            // Logic to send over BLE would go here
+        });
+    </script>
+</body>
+</html>
