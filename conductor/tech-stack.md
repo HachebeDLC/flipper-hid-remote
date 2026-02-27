@@ -2,7 +2,7 @@
 
 ## Flipper Application
 - **Language**: **C** utilizing the **Furi API**. This is the native language for Flipper Zero apps, providing direct access to hardware (USB, BLE, Display, Haptics).
-- **Build System**: **fbt (Official Flipper Build Tool)**. We will develop the application within a firmware repository to leverage the full build environment and dependencies.
+- **Build System**: **ufbt (Standalone Flipper Build Tool)**. We develop the application as a standalone project outside of the firmware tree for faster iteration and easier dependency management.
 - **Target Firmware**: **Community Firmware (Unleashed/RogueMaster)**. The application will be optimized for the expanded features and API access provided by popular community distributions, while maintaining a baseline of compatibility.
 
 ## Phone Interface
