@@ -1,9 +1,9 @@
 # Implementation Plan: Core USB-HID Emulation and BLE Control Bridge
 
 ## Phase 1: USB-HID Foundation
-- [ ] Task: Configure USB HID Descriptors
-    - [ ] Define Keyboard and Mouse report descriptors.
-    - [ ] Implement USB initialization and deinitialization routines.
+- [x] Task: Configure USB HID Descriptors [b9c9696]
+    - [x] Define Keyboard and Mouse report descriptors.
+    - [x] Implement USB initialization and deinitialization routines.
 - [ ] Task: Basic HID Injection
     - [ ] Create functions to send raw HID reports (keypresses, mouse moves).
     - [ ] Verify functionality with a test script on the Flipper.
