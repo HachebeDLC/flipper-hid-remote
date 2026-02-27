@@ -1,10 +1,10 @@
 # Implementation Plan: Implement Flipper Application
 
-## Phase 1: Build System and Project Structure
-- [ ] Task: Set up `ufbt` and `application.fam`
-    - [ ] Create the `application.fam` file to define the Flipper application package.
-    - [ ] Restructure source files (if necessary) to comply with `ufbt` conventions.
-- [ ] Task: Conductor - User Manual Verification 'Phase 1: Build System and Project Structure' (Protocol in workflow.md)
+## Phase 1: Build System and Project Structure [checkpoint: 6385484]
+- [x] Task: Set up `ufbt` and `application.fam` [3fad99c]
+    - [x] Create the `application.fam` file to define the Flipper application package.
+    - [x] Restructure source files (if necessary) to comply with `ufbt` conventions.
+- [x] Task: Conductor - User Manual Verification 'Phase 1: Build System and Project Structure' (Protocol in workflow.md) [6385484]
 
 ## Phase 2: GUI and Menu System
 - [ ] Task: Implement Furi GUI Menu
