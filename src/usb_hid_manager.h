@@ -5,10 +5,10 @@ extern "C" {
 #endif
 
 // Initializes the USB HID profile. Returns 0 on success.
-int flipper_usb_hid_init(void);
+int FlipperUsbHidInit(void);
 
 // Deinitializes the USB HID profile. Returns 0 on success.
-int flipper_usb_hid_deinit(void);
+int FlipperUsbHidDeinit(void);
 
 #ifdef __cplusplus
 }

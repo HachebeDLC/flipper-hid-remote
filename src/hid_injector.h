@@ -5,10 +5,10 @@ extern "C" {
 #endif
 
 // Injects a single keystroke. Returns 0 on success.
-int flipper_hid_inject_key(char key);
+int FlipperHidInjectKey(char key);
 
 // Injects mouse movement. Returns 0 on success.
-int flipper_hid_inject_mouse(int dx, int dy);
+int FlipperHidInjectMouse(int dx, int dy);
 
 #ifdef __cplusplus
 }
