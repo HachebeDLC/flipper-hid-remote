@@ -6,12 +6,12 @@
     - [x] Restructure source files (if necessary) to comply with `ufbt` conventions.
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Build System and Project Structure' (Protocol in workflow.md) [6385484]
 
-## Phase 2: GUI and Menu System
-- [ ] Task: Implement Furi GUI Menu
-    - [ ] Set up the main view dispatcher and view modules.
-    - [ ] Create an interactive menu view to start/stop the remote.
-    - [ ] Create a status view to display BLE and USB connection states.
-- [ ] Task: Conductor - User Manual Verification 'Phase 2: GUI and Menu System' (Protocol in workflow.md)
+## Phase 2: GUI and Menu System [checkpoint: 7154f1b]
+- [x] Task: Implement Furi GUI Menu [aa3a083]
+    - [x] Set up the main view dispatcher and view modules.
+    - [x] Create an interactive menu view to start/stop the remote.
+    - [x] Create a status view to display BLE and USB connection states.
+- [x] Task: Conductor - User Manual Verification 'Phase 2: GUI and Menu System' (Protocol in workflow.md) [7154f1b]
 
 ## Phase 3: Hardware Integration (USB, BLE, Haptics)
 - [ ] Task: Refactor Mock Implementations to FuriHal
