@@ -2,6 +2,8 @@
 #include "usb_hid_manager.h"
 #include "ble_listener.h"
 #include "protocol.h"
+#include <furi_hal_vibro.h>
+#include <furi.h>
 #include <stdio.h>
 #include <stdint.h>
 
@@ -10,6 +12,11 @@ int FlipperAppRunE2e(void) {
   
   // 1. Initialize USB HID
   if (FlipperUsbHidInit() != 0) return -1;
+  
+  // Trigger haptic feedback on USB init
+  furi_hal_vibro_on(true);
+  furi_delay_ms(50);
+  furi_hal_vibro_on(false);
   
   // 2. Start BLE Listener
   if (FlipperBleListenerStart() != 0) return -1;

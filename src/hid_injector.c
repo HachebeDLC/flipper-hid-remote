@@ -1,19 +1,20 @@
 #include "hid_injector.h"
-#include <stdio.h>
+#include <furi.h>
+#include <furi_hal_usb_hid.h>
 
 int FlipperHidInjectKey(char key) {
-  // In a real Flipper environment, this would build a HID report and call:
-  // furi_hal_usb_hid_keyboard_press(key);
-  // furi_hal_usb_hid_keyboard_release(key);
-  printf("Simulating Furi USB HID key injection: '%c'", key);
-  puts("");
-  return 0; // Success
+  uint16_t hid_key = HID_ASCII_TO_KEY(key);
+  if (hid_key != HID_KEYBOARD_NONE) {
+    furi_hal_hid_kb_press(hid_key);
+    furi_hal_hid_kb_release(hid_key);
+    return 0;
+  }
+  return -1;
 }
 
 int FlipperHidInjectMouse(int dx, int dy) {
-  // In a real Flipper environment, this would call:
-  // furi_hal_usb_hid_mouse_move(dx, dy);
-  printf("Simulating Furi USB HID mouse movement: dx=%d, dy=%d", dx, dy);
-  puts("");
-  return 0; // Success
+  if (furi_hal_hid_mouse_move(dx, dy)) {
+    return 0;
+  }
+  return -1;
 }
