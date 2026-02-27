@@ -11,7 +11,7 @@
 
 ## Communication & Protocol
 - **Transport**: **Bluetooth Low Energy (BLE)** using the Flipper's built-in Serial-over-BLE service.
-- **Data Format**: **Protobuf (Standard)**. We will use the official Flipper Protobuf definitions to ensure robust, versioned communication between the Web Bluetooth dashboard and the Flipper app.
+- **Data Format**: **Custom Binary Protocol**. We use a lightweight custom binary format (e.g., [Type][Payload]) to minimize parsing overhead and latency between the Web Bluetooth dashboard and the Flipper app.
 
 ## USB Emulation
 - **HID Profile**: **USB Composite Device**. The Flipper will present itself to the host as a standard USB Keyboard and a USB Mouse (and optionally a consumer control device for media keys).
