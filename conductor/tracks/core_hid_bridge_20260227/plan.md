@@ -22,6 +22,6 @@
 - [x] Task: Web Bluetooth Dashboard [ce15975]
     - [x] Implement BLE device discovery and connection logic in JS.
     - [x] Create a virtual "Send" button to test the end-to-end link.
-- [ ] Task: End-to-End Validation
-    - [ ] Test mouse movement and key injection from the browser to the host PC.
+- [x] Task: End-to-End Validation [200eabe]
+    - [x] Test mouse movement and key injection from the browser to the host PC.
 - [ ] Task: Conductor - User Manual Verification 'Phase 3: Phone Controller (Web Bluetooth)' (Protocol in workflow.md)
