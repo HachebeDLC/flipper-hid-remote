@@ -6,3 +6,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [x] **Track: Implement Core USB-HID Emulation and BLE Control Bridge**
   *Link: [./tracks/core_hid_bridge_20260227/](./tracks/core_hid_bridge_20260227/)*
+
+---
+
+- [ ] **Track: Implement Flipper Application**
+  *Link: [./tracks/flipper_app_20260227/](./tracks/flipper_app_20260227/)*
