@@ -13,9 +13,9 @@
 - [x] Task: BLE Serial Listener [e60f05b]
     - [x] Set up a Furi Thread to listen for BLE Serial data.
     - [x] Implement a command dispatcher to parse incoming packets.
-- [ ] Task: Protocol Implementation
-    - [ ] Define the binary structure for HID command packets.
-    - [ ] Implement the parser and validation logic.
+- [x] Task: Protocol Implementation [e353d0a]
+    - [x] Define the binary structure for HID command packets.
+    - [x] Implement the parser and validation logic.
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: BLE Communication Bridge' (Protocol in workflow.md)
 
 ## Phase 3: Phone Controller (Web Bluetooth)
