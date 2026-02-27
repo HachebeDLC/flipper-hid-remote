@@ -1,4 +1,5 @@
 #include "ble_listener.h"
+#include <furi.h>
 #include <stdio.h>
 
 int FlipperBleListenerStart(void) {
@@ -17,6 +18,7 @@ int FlipperBleListenerStop(void) {
 int FlipperBleDispatchPacket(const uint8_t* data, size_t length) {
   // In a real app, this would parse the Protobuf or binary packet
   // and call the corresponding hid_injector functions.
+  UNUSED(data);
   printf("Simulating packet dispatch: received %zu bytes.", length);
   puts("");
   return 0; // Success
