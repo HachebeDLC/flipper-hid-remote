@@ -13,9 +13,9 @@
     - [x] Create a status view to display BLE and USB connection states.
 - [x] Task: Conductor - User Manual Verification 'Phase 2: GUI and Menu System' (Protocol in workflow.md) [7154f1b]
 
-## Phase 3: Hardware Integration (USB, BLE, Haptics)
-- [ ] Task: Refactor Mock Implementations to FuriHal
-    - [ ] Update `usb_hid_manager` and `hid_injector` to use actual FuriHal USB APIs.
-    - [ ] Update `ble_listener` to use actual FuriHal BT Serial APIs.
-    - [ ] Integrate `furi_hal_vibro` to trigger haptic feedback on connection events.
-- [ ] Task: Conductor - User Manual Verification 'Phase 3: Hardware Integration (USB, BLE, Haptics)' (Protocol in workflow.md)
+## Phase 3: Hardware Integration (USB, BLE, Haptics) [checkpoint: 3c4ea15]
+- [x] Task: Refactor Mock Implementations to FuriHal [19ca204]
+    - [x] Update `usb_hid_manager` and `hid_injector` to use actual FuriHal USB APIs.
+    - [x] Update `ble_listener` to use actual FuriHal BT Serial APIs.
+    - [x] Integrate `furi_hal_vibro` to trigger haptic feedback on connection events.
+- [x] Task: Conductor - User Manual Verification 'Phase 3: Hardware Integration (USB, BLE, Haptics)' (Protocol in workflow.md) [3c4ea15]
