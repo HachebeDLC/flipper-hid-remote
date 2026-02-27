@@ -1,0 +1,8 @@
+{
+  "track_id": "core_hid_bridge_20260227",
+  "type": "feature",
+  "status": "new",
+  "created_at": "2026-02-27T10:00:00Z",
+  "updated_at": "2026-02-27T10:00:00Z",
+  "description": "Implement Core USB-HID Emulation and BLE Control Bridge"
+}
