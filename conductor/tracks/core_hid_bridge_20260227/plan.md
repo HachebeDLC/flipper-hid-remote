@@ -4,9 +4,9 @@
 - [x] Task: Configure USB HID Descriptors [b9c9696]
     - [x] Define Keyboard and Mouse report descriptors.
     - [x] Implement USB initialization and deinitialization routines.
-- [ ] Task: Basic HID Injection
-    - [ ] Create functions to send raw HID reports (keypresses, mouse moves).
-    - [ ] Verify functionality with a test script on the Flipper.
+- [x] Task: Basic HID Injection [088619a]
+    - [x] Create functions to send raw HID reports (keypresses, mouse moves).
+    - [x] Verify functionality with a test script on the Flipper.
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: USB-HID Foundation' (Protocol in workflow.md)
 
 ## Phase 2: BLE Communication Bridge
