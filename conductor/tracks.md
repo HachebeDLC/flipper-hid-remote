@@ -10,5 +10,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 - [x] **Track: Dynamic Keyboard Layout Support** (completed)
   *Link: [./archive/dynamic_layouts_20260301/](./archive/dynamic_layouts_20260301/)*
 
-- [~] **Track: Mouse and Trackpad Support** (in progress)
-  *Link: [./tracks/mouse_support_20260301/](./tracks/mouse_support_20260301/)*
+- [x] **Track: Mouse and Trackpad Support** (completed)
+  *Link: [./archive/mouse_support_20260301/](./archive/mouse_support_20260301/)*
