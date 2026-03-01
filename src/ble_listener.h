@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -21,6 +22,9 @@ int FlipperBleDispatchPacket(const uint8_t* data, size_t length);
 
 // Notifies that the buffer is empty
 void FlipperBleNotifyEmpty(void);
+
+// Returns true if battery service is active
+bool FlipperBleIsBatteryServiceActive(void);
 
 #ifdef __cplusplus
 }

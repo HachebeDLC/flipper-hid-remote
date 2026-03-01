@@ -3,7 +3,9 @@
 #include <bt/bt_service/bt.h>
 #include <profiles/serial_profile.h>
 #include <services/serial_service.h>
+#include <services/battery_service.h>
 #include <furi_hal_bt.h>
+#include <furi_hal_power.h>
 #include <furi.h>
 #include <rpc/rpc.h>
 
@@ -11,7 +13,9 @@ static FuriHalBleProfileBase* ble_profile = NULL;
 static Bt* bt_system = NULL;
 static void* app_gui_manager = NULL;
 static FuriTimer* timer = NULL;
+static Rpc* rpc_system = NULL;
 static RpcSession* rpc_session_blocker = NULL;
+static BleServiceBattery* battery_svc = NULL;
 
 #include <furi_hal_vibro.h>
 #include "gui_manager.h"
@@ -38,8 +42,8 @@ int FlipperBleListenerStart(void* gui_manager) {
   app_gui_manager = gui_manager;
   
   // LOCK OUT THE SYSTEM RPC (Turn 181 Winning Logic)
-  Rpc* rpc = furi_record_open(RECORD_RPC);
-  rpc_session_blocker = rpc_session_open(rpc, RpcOwnerBle);
+  rpc_system = furi_record_open(RECORD_RPC);
+  rpc_session_blocker = rpc_session_open(rpc_system, RpcOwnerBle);
   
   bt_system = furi_record_open(RECORD_BT);
   bt_disconnect(bt_system);
@@ -54,6 +58,14 @@ int FlipperBleListenerStart(void* gui_manager) {
   }
   
   furi_delay_ms(1500);
+  
+  // START BATTERY SERVICE
+  battery_svc = ble_svc_battery_start(true);
+  
+  // Force an initial update
+  uint8_t level = furi_hal_power_get_pct();
+  ble_svc_battery_update_level(battery_svc, level);
+  
   ble_profile_serial_set_event_callback(ble_profile, 512, BleSerialCallback, NULL);
   ble_profile_serial_notify_buffer_is_empty(ble_profile);
   ble_profile_serial_set_rpc_active(ble_profile, false);
@@ -76,6 +88,12 @@ int FlipperBleListenerStart(void* gui_manager) {
 
 int FlipperBleListenerStop(void) {
   if (timer) { furi_timer_stop(timer); furi_timer_free(timer); timer = NULL; }
+  
+  if (battery_svc) {
+      ble_svc_battery_stop(battery_svc);
+      battery_svc = NULL;
+  }
+
   if (ble_profile == NULL) return 0;
   bt_profile_restore_default(bt_system);
   furi_record_close(RECORD_BT);
@@ -89,6 +107,10 @@ void FlipperBleNotifyEmpty(void) {
   if (ble_profile != NULL) {
       ble_profile_serial_notify_buffer_is_empty(ble_profile);
   }
+}
+
+bool FlipperBleIsBatteryServiceActive(void) {
+    return battery_svc != NULL;
 }
 
 int FlipperBleDispatchPacket(const uint8_t* data, size_t length) {

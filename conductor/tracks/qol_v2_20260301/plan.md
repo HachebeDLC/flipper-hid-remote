@@ -1,7 +1,7 @@
 # Plan: Quality of Life Improvements v2
 
 ## Phase 1: Hardware Integration and Persistence
-- [ ] Task: Battery Level Reporting
+- [~] Task: Battery Level Reporting
     - [ ] Write tests for BLE battery service reporting.
     - [ ] Implement Battery Service in `ble_listener.c`.
     - [ ] Verify battery level appears on host device.
