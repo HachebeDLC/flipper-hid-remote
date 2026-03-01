@@ -1,11 +1,22 @@
 #pragma once
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-// Injects a single keystroke. Returns 0 on success.
+// Injects a single keystroke (press + release). Returns 0 on success.
 int FlipperHidInjectKey(char key);
+
+// Injects a key down event. Returns 0 on success.
+int FlipperHidInjectKeyDown(uint16_t key);
+
+// Injects a key up event. Returns 0 on success.
+int FlipperHidInjectKeyUp(uint16_t key);
+
+// Sets the current modifier mask. Returns 0 on success.
+int FlipperHidSetModifiers(uint8_t modifiers);
 
 // Injects mouse movement. Returns 0 on success.
 int FlipperHidInjectMouse(int dx, int dy);
