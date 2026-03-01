@@ -9,14 +9,14 @@
     - [x] Update injection functions to apply active modifiers to keystrokes.
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Protocol and Core Extension' (Protocol in workflow.md) [5ff32f8]
 
-## Phase 2: Web Dashboard Keyboard UI
+## Phase 2: Web Dashboard Keyboard UI [checkpoint: afbec2c]
 - [x] Task: Native Keyboard Trigger [2e78bb2]
     - [x] Implement a hidden input and keyboard icon to focus/unfocus native keyboard.
     - [x] Map native `keydown` events to our BLE protocol packets.
 - [x] Task: Modifier and Shortcut UI [2e78bb2]
     - [x] Create a "Sticky Keys" panel for Ctrl, Alt, Shift, Cmd.
     - [x] Add a "Quick Shortcuts" grid (Copy, Paste, Undo, etc.).
-- [ ] Task: Conductor - User Manual Verification 'Phase 2: Web Dashboard Keyboard UI' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 2: Web Dashboard Keyboard UI' (Protocol in workflow.md) [afbec2c]
 
 ## Phase 3: Integration and Polish
 - [ ] Task: End-to-End Keyboard Test
