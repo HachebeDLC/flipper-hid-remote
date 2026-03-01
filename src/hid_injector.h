@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -18,8 +19,11 @@ int FlipperHidInjectKeyUp(uint16_t key);
 // Sets the current modifier mask. Returns 0 on success.
 int FlipperHidSetModifiers(uint8_t modifiers);
 
-// Translates ASCII to Spanish HID Keycode
-uint16_t TranslateToSpanish(char ascii);
+// Loads the default US layout.
+void FlipperHidLayoutLoadDefault(void);
+
+// Loads a layout from a .kl file. Returns true on success.
+bool FlipperHidLayoutLoadFile(const char* path);
 
 // Injects mouse movement. Returns 0 on success.
 int FlipperHidInjectMouse(int dx, int dy);

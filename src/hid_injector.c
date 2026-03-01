@@ -2,40 +2,63 @@
 #include <furi.h>
 #include <furi_hal_usb_hid.h>
 #include <furi_hal_vibro.h>
+#include <storage/storage.h>
 
 static uint16_t current_modifiers = 0;
+static uint16_t active_layout[128];
 
-uint16_t TranslateToSpanish(char ascii) {
-    switch(ascii) {
-        case '?': return HID_KEYBOARD_MINUS | KEY_MOD_LEFT_SHIFT;
-        case '@': return HID_KEYBOARD_2 | KEY_MOD_RIGHT_ALT;
-        case '!': return HID_KEYBOARD_1 | KEY_MOD_LEFT_SHIFT;
-        case '"': return HID_KEYBOARD_2 | KEY_MOD_LEFT_SHIFT;
-        case '#': return HID_KEYBOARD_3 | KEY_MOD_RIGHT_ALT;
-        case '$': return HID_KEYBOARD_4 | KEY_MOD_LEFT_SHIFT;
-        case '%': return HID_KEYBOARD_5 | KEY_MOD_LEFT_SHIFT;
-        case '&': return HID_KEYBOARD_6 | KEY_MOD_LEFT_SHIFT;
-        case '/': return HID_KEYBOARD_7 | KEY_MOD_LEFT_SHIFT;
-        case '(': return HID_KEYBOARD_8 | KEY_MOD_LEFT_SHIFT;
-        case ')': return HID_KEYBOARD_9 | KEY_MOD_LEFT_SHIFT;
-        case '=': return HID_KEYBOARD_0 | KEY_MOD_LEFT_SHIFT;
-        case '\'': return HID_KEYBOARD_MINUS;
-        case '.': return HID_KEYBOARD_DOT;
-        case ',': return HID_KEYBOARD_COMMA;
-        case '-': return HID_KEYBOARD_SLASH;
-        case '_': return HID_KEYBOARD_SLASH | KEY_MOD_LEFT_SHIFT;
-        case ':': return HID_KEYBOARD_DOT | KEY_MOD_LEFT_SHIFT;
-        case ';': return HID_KEYBOARD_COMMA | KEY_MOD_LEFT_SHIFT;
-        default: return HID_ASCII_TO_KEY(ascii);
+// Helper to convert 8-bit BadUSB modifiers to 16-bit FuriHal modifiers
+static uint16_t ConvertModifiers(uint8_t kl_mods) {
+    uint16_t furi_mods = 0;
+    if (kl_mods & (1 << 0)) furi_mods |= KEY_MOD_LEFT_CTRL;
+    if (kl_mods & (1 << 1)) furi_mods |= KEY_MOD_LEFT_SHIFT;
+    if (kl_mods & (1 << 2)) furi_mods |= KEY_MOD_LEFT_ALT;
+    if (kl_mods & (1 << 3)) furi_mods |= KEY_MOD_LEFT_GUI;
+    if (kl_mods & (1 << 4)) furi_mods |= KEY_MOD_RIGHT_CTRL;
+    if (kl_mods & (1 << 5)) furi_mods |= KEY_MOD_RIGHT_SHIFT;
+    if (kl_mods & (1 << 6)) furi_mods |= KEY_MOD_RIGHT_ALT;
+    if (kl_mods & (1 << 7)) furi_mods |= KEY_MOD_RIGHT_GUI;
+    return furi_mods;
+}
+
+void FlipperHidLayoutLoadDefault(void) {
+    for (int i = 0; i < 128; i++) {
+        active_layout[i] = HID_ASCII_TO_KEY(i);
     }
 }
 
+bool FlipperHidLayoutLoadFile(const char* path) {
+    Storage* storage = furi_record_open(RECORD_STORAGE);
+    File* file = storage_file_alloc(storage);
+    bool success = false;
+
+    if (storage_file_open(file, path, FSAM_READ, FSOM_OPEN_EXISTING)) {
+        uint16_t raw_layout[128];
+        if (storage_file_read(file, raw_layout, 256) == 256) {
+            // Convert each entry from KL format to FuriHal format
+            for (int i = 0; i < 128; i++) {
+                uint8_t scancode = raw_layout[i] & 0xFF;
+                uint8_t mods = (raw_layout[i] >> 8) & 0xFF;
+                active_layout[i] = scancode | ConvertModifiers(mods);
+            }
+            success = true;
+        }
+    }
+
+    storage_file_close(file);
+    storage_file_free(file);
+    furi_record_close(RECORD_STORAGE);
+    return success;
+}
+
 int FlipperHidInjectKey(char key) {
-  uint16_t hid_key = TranslateToSpanish(key);
+  if ((uint8_t)key >= 128) return -1;
+  
+  uint16_t hid_key = active_layout[(uint8_t)key];
   if (hid_key != HID_KEYBOARD_NONE) {
     uint16_t key_with_mods = hid_key | current_modifiers;
     furi_hal_hid_kb_press(key_with_mods);
-    furi_delay_ms(60); // INCREASED HOLD TIME FOR IPHONE
+    furi_delay_ms(60); 
     furi_hal_hid_kb_release(key_with_mods);
     return 0;
   }

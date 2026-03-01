@@ -4,15 +4,19 @@
 #include <gui/view_dispatcher.h>
 #include <gui/modules/submenu.h>
 #include <gui/modules/variable_item_list.h>
+#include <dialogs/dialogs.h>
 
 typedef struct {
   Gui* gui;
   ViewDispatcher* view_dispatcher;
   Submenu* submenu;
   VariableItemList* variable_item_list;
+  VariableItemList* settings_list;
+  DialogsApp* dialogs;
   
   VariableItem* ble_status_item;
   VariableItem* last_byte_item;
+  VariableItem* layout_item;
   
   FuriMessageQueue* command_queue;
   
