@@ -14,8 +14,7 @@ typedef struct {
   VariableItem* ble_status_item;
   VariableItem* last_byte_item;
   
-  uint8_t ble_buffer[4];
-  size_t ble_buffer_size;
+  FuriMessageQueue* command_queue;
   
   // Debug counters
   uint32_t packets_received;

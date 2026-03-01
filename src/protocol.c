@@ -31,13 +31,13 @@ int FlipperProtocolParse(const uint8_t* packet, size_t length) {
   else if (type == PACKET_TYPE_KEY_DOWN) {
       // Expecting [Type][HID KeyCode]
       if (length < 2) return -1;
-      uint16_t key = packet[1];
+      uint16_t key = (uint16_t)packet[1];
       return FlipperHidInjectKeyDown(key);
   }
   else if (type == PACKET_TYPE_KEY_UP) {
       // Expecting [Type][HID KeyCode]
       if (length < 2) return -1;
-      uint16_t key = packet[1];
+      uint16_t key = (uint16_t)packet[1];
       return FlipperHidInjectKeyUp(key);
   }
   else if (type == PACKET_TYPE_SET_MODS) {

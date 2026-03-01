@@ -18,6 +18,9 @@ int FlipperHidInjectKeyUp(uint16_t key);
 // Sets the current modifier mask. Returns 0 on success.
 int FlipperHidSetModifiers(uint8_t modifiers);
 
+// Translates ASCII to Spanish HID Keycode
+uint16_t TranslateToSpanish(char ascii);
+
 // Injects mouse movement. Returns 0 on success.
 int FlipperHidInjectMouse(int dx, int dy);
 

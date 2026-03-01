@@ -17,6 +17,7 @@
         .mod-btn.active { background: #00bcd4; color: white; border-color: #eee; }
         .shortcut-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; margin: 20px; }
         .shortcut-btn { background: #222; border: 1px solid #444; padding: 10px; border-radius: 6px; cursor: pointer; }
+        .os-toggle { margin: 20px; padding: 10px; border: 1px solid #444; border-radius: 8px; display: inline-block; }
     </style>
 </head>
 <body>
@@ -24,6 +25,14 @@
     
     <div id="status">Disconnected</div>
     <button id="connectBtn">Connect to Flipper</button>
+
+    <div class="os-toggle">
+        Target OS: 
+        <select id="osSelect" style="background: #222; color: #fff; padding: 5px;">
+            <option value="pc">Windows/Linux (Ctrl)</option>
+            <option value="ios">iPhone/Mac (Cmd)</option>
+        </select>
+    </div>
 
     <div class="mod-panel">
         <div class="mod-btn" id="ctrlBtn" data-bit="0x01">Ctrl</div>
@@ -42,22 +51,44 @@
     <div class="kb-container">
         <div id="kbIcon" class="icon" title="Open Keyboard">⌨️</div>
         <input type="text" id="hiddenInput" autocapitalize="none" autocomplete="off" spellcheck="false">
-        <p>Tap the keyboard icon to type.</p>
+        <p>Tap the keyboard icon or use your PC keyboard.</p>
     </div>
 
-    <script src="app.js?v=18"></script>
+    <script src="app.js?v=24"></script>
     <script>
         const connectBtn = document.getElementById('connectBtn');
         const statusDiv = document.getElementById('status');
         const kbIcon = document.getElementById('kbIcon');
         const hiddenInput = document.getElementById('hiddenInput');
+        const osSelect = document.getElementById('osSelect');
 
         let currentMods = 0;
+        let bleQueue = [];
+        let bleProcessing = false;
+
+        const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+        // STRICT SEQUENTIAL QUEUE
+        const queueSend = async (actionFn) => {
+            bleQueue.push(actionFn);
+            if (bleProcessing) return;
+            
+            bleProcessing = true;
+            while (bleQueue.length > 0) {
+                const fn = bleQueue.shift();
+                try {
+                    await fn();
+                    await sleep(60); // Essential cool-down for Flipper buffer
+                } catch (e) {
+                    console.error("BLE Queue Error:", e);
+                }
+            }
+            bleProcessing = false;
+        };
 
         connectBtn.addEventListener('click', async () => {
             statusDiv.textContent = 'Connecting...';
-            const success = await connectToFlipper();
-            if (success) {
+            if (await connectToFlipper()) {
                 statusDiv.textContent = 'Connected to Flipper';
                 connectBtn.disabled = true;
             } else {
@@ -65,53 +96,114 @@
             }
         });
 
-        kbIcon.addEventListener('click', () => {
-            hiddenInput.focus();
-        });
+        kbIcon.addEventListener('click', () => { hiddenInput.focus(); });
 
+        // Normal typing
         hiddenInput.addEventListener('input', (e) => {
             const char = e.data;
-            if (char) {
-                console.log('Typing:', char);
-                sendKeyToFlipper(char);
-                hiddenInput.value = '';
+            if (char && char.length === 1) {
+                queueSend(() => sendKeyToFlipper(char));
+            }
+            hiddenInput.value = '';
+        });
+
+        // Shortcuts and Modifiers
+        window.addEventListener('keydown', (e) => {
+            const isIOS = osSelect.value === 'ios';
+            
+            // 1. Sync Modifiers
+            let newMods = 0;
+            if (e.shiftKey) newMods |= 0x02;
+            if (e.altKey) newMods |= 0x04;
+            if (e.ctrlKey) newMods |= isIOS ? 0x08 : 0x01; // Auto-map PC-Ctrl to iOS-Cmd
+            if (e.metaKey) newMods |= 0x08;
+
+            if (newMods !== currentMods) {
+                currentMods = newMods;
+                queueSend(() => sendModifiersToFlipper(currentMods));
+                // UI Sync
+                document.getElementById('ctrlBtn').classList.toggle('active', !!(currentMods & 0x01));
+                document.getElementById('shiftBtn').classList.toggle('active', !!(currentMods & 0x02));
+                document.getElementById('altBtn').classList.toggle('active', !!(currentMods & 0x04));
+                document.getElementById('cmdBtn').classList.toggle('active', !!(currentMods & 0x08));
+            }
+
+            // 2. Handle Shortcuts (Ctrl/Cmd + Key)
+            if (e.ctrlKey || e.metaKey || e.altKey) {
+                // If it's a single letter, the 'input' event won't fire, so we catch it here
+                if (e.key.length === 1 && e.key !== 'Control' && e.key !== 'Alt' && e.key !== 'Shift' && e.key !== 'Meta') {
+                    e.preventDefault();
+                    queueSend(() => sendKeyToFlipper(e.key.toLowerCase()));
+                }
+            }
+
+            // 3. Special Keys
+            if (e.key === 'Backspace' || e.key === 'Enter' || e.key === 'Delete') {
+                if (document.activeElement === hiddenInput || e.ctrlKey || e.metaKey) {
+                    e.preventDefault();
+                    if (e.key === 'Enter') {
+                        queueSend(() => sendKeyToFlipper('\n'));
+                    } else if (e.key === 'Backspace') {
+                        queueSend(async () => {
+                            await sendKeyDownToFlipper(0x2A);
+                            await sleep(30);
+                            await sendKeyUpToFlipper(0x2A);
+                        });
+                    } else if (e.key === 'Delete') {
+                        queueSend(async () => {
+                            await sendKeyDownToFlipper(0x4C);
+                            await sleep(30);
+                            await sendKeyUpToFlipper(0x4C);
+                        });
+                    }
+                }
             }
         });
 
-        hiddenInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                sendKeyToFlipper('\n');
-            } else if (e.key === 'Backspace') {
-                sendKeyDownToFlipper(0x2A);
-                sendKeyUpToFlipper(0x2A);
+        window.addEventListener('keyup', (e) => {
+            const isIOS = osSelect.value === 'ios';
+            let newMods = 0;
+            if (e.shiftKey) newMods |= 0x02;
+            if (e.altKey) newMods |= 0x04;
+            if (e.ctrlKey) newMods |= isIOS ? 0x08 : 0x01;
+            if (e.metaKey) newMods |= 0x08;
+
+            if (newMods !== currentMods) {
+                currentMods = newMods;
+                queueSend(() => sendModifiersToFlipper(currentMods));
+                document.getElementById('ctrlBtn').classList.toggle('active', !!(currentMods & 0x01));
+                document.getElementById('shiftBtn').classList.toggle('active', !!(currentMods & 0x02));
+                document.getElementById('altBtn').classList.toggle('active', !!(currentMods & 0x04));
+                document.getElementById('cmdBtn').classList.toggle('active', !!(currentMods & 0x08));
             }
         });
 
-        // Modifier logic
+        // Manual Buttons
+        const manualShortcut = (keyChar) => {
+            const isIOS = osSelect.value === 'ios';
+            const mod = isIOS ? 0x08 : 0x01;
+            queueSend(async () => {
+                await sendModifiersToFlipper(currentMods | mod);
+                await sleep(40);
+                await sendKeyToFlipper(keyChar);
+                await sleep(40);
+                await sendModifiersToFlipper(currentMods);
+            });
+        };
+
+        document.getElementById('copyBtn').addEventListener('click', () => manualShortcut('c'));
+        document.getElementById('pasteBtn').addEventListener('click', () => manualShortcut('v'));
+        document.getElementById('undoBtn').addEventListener('click', () => manualShortcut('z'));
+        document.getElementById('saveBtn').addEventListener('click', () => manualShortcut('s'));
+
         document.querySelectorAll('.mod-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const bit = parseInt(btn.getAttribute('data-bit'), 16);
-                if (btn.classList.toggle('active')) {
-                    currentMods |= bit;
-                } else {
-                    currentMods &= ~bit;
-                }
-                sendModifiersToFlipper(currentMods);
+                currentMods ^= bit;
+                btn.classList.toggle('active');
+                queueSend(() => sendModifiersToFlipper(currentMods));
             });
         });
-
-        // Shortcut logic
-        const sendShortcut = async (key) => {
-            // Temporary Ctrl
-            sendModifiersToFlipper(currentMods | 0x01);
-            sendKeyToFlipper(key);
-            sendModifiersToFlipper(currentMods);
-        };
-
-        document.getElementById('copyBtn').addEventListener('click', () => sendShortcut('c'));
-        document.getElementById('pasteBtn').addEventListener('click', () => sendShortcut('v'));
-        document.getElementById('undoBtn').addEventListener('click', () => sendShortcut('z'));
-        document.getElementById('saveBtn').addEventListener('click', () => sendShortcut('s'));
     </script>
 </body>
 </html>

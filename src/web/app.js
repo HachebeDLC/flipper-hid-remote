@@ -36,6 +36,7 @@ async function sendData(data) {
         console.error('Not connected!');
         return;
     }
+    // No more manual Protobuf framing, just raw bytes as we had in Turn 103
     if (flipperRxCharacteristic.properties.writeWithoutResponse) {
         await flipperRxCharacteristic.writeValueWithoutResponse(data);
     } else {

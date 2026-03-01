@@ -24,10 +24,10 @@
     - [x] Verify that "Shift + a" results in an uppercase "A".
 - [x] Task: Conductor - User Manual Verification 'Phase 3: Integration and Polish' (Protocol in workflow.md) [443796a]
 
-## Phase 4: Character Mapping and Bug Fixes
-- [ ] Task: Fix Special Character Mappings
-    - [ ] Investigate why question mark '?' maps to underscore '_'.
-    - [ ] Update `HID_ASCII_TO_KEY` logic or character handling in `hid_injector.c`.
-- [ ] Task: Expand Special Character Support
-    - [ ] Ensure all common punctuation marks are correctly injected.
-- [ ] Task: Conductor - User Manual Verification 'Phase 4: Character Mapping and Bug Fixes' (Protocol in workflow.md)
+## Phase 4: Character Mapping and Bug Fixes [checkpoint: 82781e7]
+- [x] Task: Fix Special Character Mappings [82781e7]
+    - [x] Investigate why question mark '?' maps to underscore '_'.
+    - [x] Update `HID_ASCII_TO_KEY` logic or character handling in `hid_injector.c`.
+- [x] Task: Expand Special Character Support [82781e7]
+    - [x] Ensure all common punctuation marks are correctly injected.
+- [x] Task: Conductor - User Manual Verification 'Phase 4: Character Mapping and Bug Fixes' (Protocol in workflow.md) [82781e7]

@@ -19,16 +19,13 @@ static RpcSession* rpc_session_blocker = NULL;
 static uint16_t BleSerialCallback(SerialServiceEvent event, void* context) {
   if (event.event == SerialServiceEventTypeDataReceived) {
     if (app_gui_manager != NULL) {
-        // We found that raw bytes work best in this mode
         GuiManagerHandleBleData(app_gui_manager, event.data.buffer, event.data.size);
     }
   }
   UNUSED(context);
-  // Returning the full buffer size signals to the radio that we are ready for more data
   return 512; 
 }
 
-// Aggressively re-register the callback to prevent the system from stealing it
 static void TimerCallback(void* context) {
     if (ble_profile != NULL) {
         ble_profile_serial_set_event_callback(ble_profile, 512, BleSerialCallback, NULL);
@@ -38,10 +35,9 @@ static void TimerCallback(void* context) {
 
 int FlipperBleListenerStart(void* gui_manager) {
   if (ble_profile != NULL) return 0;
-  
   app_gui_manager = gui_manager;
   
-  // 1. Lock out the system RPC
+  // LOCK OUT THE SYSTEM RPC (Turn 181 Winning Logic)
   Rpc* rpc = furi_record_open(RECORD_RPC);
   rpc_session_blocker = rpc_session_open(rpc, RpcOwnerBle);
   
@@ -49,7 +45,6 @@ int FlipperBleListenerStart(void* gui_manager) {
   bt_disconnect(bt_system);
   furi_delay_ms(500);
 
-  // 2. Start the profile
   ble_profile = bt_profile_start(bt_system, ble_profile_serial, NULL);
   if (ble_profile == NULL) {
       if (rpc_session_blocker) rpc_session_close(rpc_session_blocker);
@@ -59,15 +54,11 @@ int FlipperBleListenerStart(void* gui_manager) {
   }
   
   furi_delay_ms(1500);
-  
-  // 3. Register the callback and disable RPC parsing
   ble_profile_serial_set_event_callback(ble_profile, 512, BleSerialCallback, NULL);
   ble_profile_serial_notify_buffer_is_empty(ble_profile);
   ble_profile_serial_set_rpc_active(ble_profile, false);
-  
   furi_hal_bt_start_advertising();
   
-  // 4. Start the "Aggressive Re-registration" timer
   timer = furi_timer_alloc(TimerCallback, FuriTimerTypePeriodic, NULL);
   furi_timer_start(timer, furi_ms_to_ticks(500));
   
@@ -84,27 +75,20 @@ int FlipperBleListenerStart(void* gui_manager) {
 }
 
 int FlipperBleListenerStop(void) {
-  if (timer) {
-      furi_timer_stop(timer);
-      furi_timer_free(timer);
-      timer = NULL;
-  }
+  if (timer) { furi_timer_stop(timer); furi_timer_free(timer); timer = NULL; }
   if (ble_profile == NULL) return 0;
-  
   bt_profile_restore_default(bt_system);
   furi_record_close(RECORD_BT);
-  
-  if (rpc_session_blocker) {
-      rpc_session_close(rpc_session_blocker);
-      rpc_session_blocker = NULL;
-  }
+  if (rpc_session_blocker) { rpc_session_close(rpc_session_blocker); rpc_session_blocker = NULL; }
   furi_record_close(RECORD_RPC);
-  
   ble_profile = NULL;
-  bt_system = NULL;
-  app_gui_manager = NULL;
-  
   return 0;
+}
+
+void FlipperBleNotifyEmpty(void) {
+  if (ble_profile != NULL) {
+      ble_profile_serial_notify_buffer_is_empty(ble_profile);
+  }
 }
 
 int FlipperBleDispatchPacket(const uint8_t* data, size_t length) {

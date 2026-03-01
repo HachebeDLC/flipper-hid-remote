@@ -2,6 +2,7 @@
 #include "usb_hid_manager.h"
 #include "ble_listener.h"
 #include "protocol.h"
+#include "hid_injector.h"
 #include <furi.h>
 #include <furi_hal_vibro.h>
 
@@ -35,27 +36,31 @@ static bool CustomEventCallback(void* context, uint32_t event) {
     view_dispatcher_switch_to_view(manager->view_dispatcher, GuiManagerViewStatus);
     return true;
   } else if (event == GuiManagerEventBleDataReceived) {
-    manager->packets_received++;
-    if (manager->ble_buffer_size > 0) {
-        manager->last_byte = manager->ble_buffer[0];
+    uint8_t packet[2];
+    // Pull ALL pending packets from the queue
+    while (furi_message_queue_get(manager->command_queue, packet, 0) == FuriStatusOk) {
+        manager->packets_received++;
+        manager->last_byte = packet[1];
+        
+        // Process HID injection
+        FlipperProtocolParse(packet, 2);
     }
-    
-    char buf[16];
+
+    // Update Screen
+    char buf[32];
     snprintf(buf, sizeof(buf), "Pkts: %lu", manager->packets_received);
     variable_item_set_current_value_text(manager->ble_status_item, buf);
     
-    snprintf(buf, sizeof(buf), "0x%02X", manager->last_byte);
+    // Show translated code for the very last byte received
+    uint16_t hid_key = TranslateToSpanish((char)manager->last_byte);
+    snprintf(buf, sizeof(buf), "'%c' -> HID 0x%02X", (char)manager->last_byte, (uint8_t)(hid_key & 0xFF));
     variable_item_set_current_value_text(manager->last_byte_item, buf);
-    
-    // HUGE DATA INDICATOR
-    submenu_set_header(manager->submenu, "DATA RECEIVED!");
 
     furi_hal_vibro_on(true);
     furi_delay_ms(10);
     furi_hal_vibro_on(false);
 
-    FlipperProtocolParse(manager->ble_buffer, manager->ble_buffer_size);
-    
+    FlipperBleNotifyEmpty();
     return true;
   }
   return false;
@@ -63,11 +68,10 @@ static bool CustomEventCallback(void* context, uint32_t event) {
 
 void GuiManagerHandleBleData(GuiManager* manager, const uint8_t* data, size_t size) {
   furi_assert(manager);
-  if (size == 0) return;
+  if (size < 2) return;
 
-  size_t to_copy = size > sizeof(manager->ble_buffer) ? sizeof(manager->ble_buffer) : size;
-  memcpy(manager->ble_buffer, data, to_copy);
-  manager->ble_buffer_size = to_copy;
+  // Push the 2-byte command packet into the queue
+  furi_message_queue_put(manager->command_queue, data, 0);
   
   view_dispatcher_send_custom_event(manager->view_dispatcher, GuiManagerEventBleDataReceived);
 }
@@ -85,6 +89,9 @@ GuiManager* GuiManagerAlloc(void) {
   view_dispatcher_attach_to_gui(manager->view_dispatcher, manager->gui, ViewDispatcherTypeFullscreen);
   view_dispatcher_set_event_callback_context(manager->view_dispatcher, manager);
   view_dispatcher_set_custom_event_callback(manager->view_dispatcher, CustomEventCallback);
+
+  // Initialize command queue (stores 2-byte packets)
+  manager->command_queue = furi_message_queue_alloc(16, 2);
   
   manager->submenu = submenu_alloc();
   submenu_set_header(manager->submenu, "HID Remote");
@@ -113,6 +120,9 @@ void GuiManagerFree(GuiManager* manager) {
   view_dispatcher_remove_view(manager->view_dispatcher, GuiManagerViewStatus);
   submenu_free(manager->submenu);
   variable_item_list_free(manager->variable_item_list);
+  
+  furi_message_queue_free(manager->command_queue);
+  
   view_dispatcher_free(manager->view_dispatcher);
   furi_record_close(RECORD_GUI);
   free(manager);
