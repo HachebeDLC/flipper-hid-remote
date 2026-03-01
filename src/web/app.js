@@ -68,6 +68,27 @@ async function sendModifiersToFlipper(mask) {
     await sendData(data);
 }
 
+async function sendMousePosToFlipper(dx, dy) {
+    // Clamp to signed 8-bit range (-127 to 127)
+    dx = Math.max(-127, Math.min(127, dx));
+    dy = Math.max(-127, Math.min(127, dy));
+    console.log(`Sending Mouse: ${dx}, ${dy}`);
+    const data = new Uint8Array([0x02, dx & 0xFF, dy & 0xFF]);
+    await sendData(data);
+}
+
+async function sendMouseButtonToFlipper(mask) {
+    console.log(`Sending Mouse Button: 0x${mask.toString(16)}`);
+    const data = new Uint8Array([0x06, mask]);
+    await sendData(data);
+}
+
+async function sendMouseScrollToFlipper(delta) {
+    // delta: -127 to 127
+    const data = new Uint8Array([0x07, delta & 0xFF]);
+    await sendData(data);
+}
+
 // Export for testing
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { 
@@ -76,6 +97,8 @@ if (typeof module !== 'undefined' && module.exports) {
         sendKeyDownToFlipper,
         sendKeyUpToFlipper,
         sendModifiersToFlipper,
+        sendMousePosToFlipper,
+        sendMouseButtonToFlipper,
         __setMockCharacteristic: (mock) => { flipperRxCharacteristic = mock; }
     };
 }

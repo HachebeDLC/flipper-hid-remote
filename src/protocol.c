@@ -1,5 +1,6 @@
 #include "protocol.h"
 #include "hid_injector.h"
+#include <furi_hal_usb_hid.h>
 
 // Define packet types
 #define PACKET_TYPE_KEYBOARD 0x01
@@ -7,6 +8,8 @@
 #define PACKET_TYPE_KEY_DOWN  0x03
 #define PACKET_TYPE_KEY_UP    0x04
 #define PACKET_TYPE_SET_MODS  0x05
+#define PACKET_TYPE_MOUSE_BTN 0x06
+#define PACKET_TYPE_MOUSE_SCROLL 0x07
 
 int FlipperProtocolParse(const uint8_t* packet, size_t length) {
   if (packet == NULL || length == 0) {
@@ -45,6 +48,19 @@ int FlipperProtocolParse(const uint8_t* packet, size_t length) {
       if (length < 2) return -1;
       uint8_t mods = packet[1];
       return FlipperHidSetModifiers(mods);
+  }
+  else if (type == PACKET_TYPE_MOUSE_BTN) {
+      // Expecting [Type][Button Mask]
+      if (length < 2) return -1;
+      uint8_t btn_mask = packet[1];
+      return FlipperHidInjectMouseButton(btn_mask);
+  }
+  else if (type == PACKET_TYPE_MOUSE_SCROLL) {
+      // Expecting [Type][delta]
+      if (length < 2) return -1;
+      int8_t delta = (int8_t)packet[1];
+      furi_hal_hid_mouse_scroll(delta);
+      return 0;
   }
   
   return -1; // Unknown packet type

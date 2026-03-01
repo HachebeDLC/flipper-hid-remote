@@ -28,6 +28,9 @@ bool FlipperHidLayoutLoadFile(const char* path);
 // Injects mouse movement. Returns 0 on success.
 int FlipperHidInjectMouse(int dx, int dy);
 
+// Injects mouse button state (mask). Returns 0 on success.
+int FlipperHidInjectMouseButton(uint8_t button_mask);
+
 #ifdef __cplusplus
 }
 #endif

@@ -81,6 +81,18 @@ int FlipperHidSetModifiers(uint8_t modifiers) {
 }
 
 int FlipperHidInjectMouse(int dx, int dy) {
+  // Relative movement at full speed
   if (furi_hal_hid_mouse_move(dx, dy)) return 0;
   return -1;
+}
+
+int FlipperHidInjectMouseButton(uint8_t button_mask) {
+    // If mask is 0, release all buttons
+    if (button_mask == 0) {
+        furi_hal_hid_mouse_release(0xFF);
+    } else {
+        // Otherwise, press the requested buttons (keep them held for dragging)
+        furi_hal_hid_mouse_press(button_mask);
+    }
+    return 0;
 }

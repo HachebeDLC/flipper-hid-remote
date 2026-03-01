@@ -71,18 +71,28 @@ static bool CustomEventCallback(void* context, uint32_t event) {
     view_dispatcher_switch_to_view(manager->view_dispatcher, GuiManagerViewSettings);
     return true;
   } else if (event == GuiManagerEventBleDataReceived) {
-    uint8_t packet[2];
+    uint8_t packet[3];
+    char buf[32];
+    
     while (furi_message_queue_get(manager->command_queue, packet, 0) == FuriStatusOk) {
         manager->packets_received++;
         manager->last_byte = packet[1];
-        FlipperProtocolParse(packet, 2);
+        
+        size_t packet_len = (packet[0] == 0x02) ? 3 : 2;
+        
+        if (packet[0] == 0x02) {
+            snprintf(buf, sizeof(buf), "Mouse: %d, %d", (int8_t)packet[1], (int8_t)packet[2]);
+            variable_item_set_current_value_text(manager->last_byte_item, buf);
+        } else {
+            snprintf(buf, sizeof(buf), "0x%02X", manager->last_byte);
+            variable_item_set_current_value_text(manager->last_byte_item, buf);
+        }
+        
+        FlipperProtocolParse(packet, packet_len);
     }
 
-    char buf[32];
     snprintf(buf, sizeof(buf), "Pkts: %lu", manager->packets_received);
     variable_item_set_current_value_text(manager->ble_status_item, buf);
-    snprintf(buf, sizeof(buf), "0x%02X", manager->last_byte);
-    variable_item_set_current_value_text(manager->last_byte_item, buf);
 
     furi_hal_vibro_on(true);
     furi_delay_ms(10);
@@ -97,7 +107,12 @@ static bool CustomEventCallback(void* context, uint32_t event) {
 void GuiManagerHandleBleData(GuiManager* manager, const uint8_t* data, size_t size) {
   furi_assert(manager);
   if (size < 2) return;
-  furi_message_queue_put(manager->command_queue, data, 0);
+
+  uint8_t packet_to_queue[3] = {0};
+  size_t to_copy = (size > 3) ? 3 : size;
+  memcpy(packet_to_queue, data, to_copy);
+
+  furi_message_queue_put(manager->command_queue, packet_to_queue, 0);
   view_dispatcher_send_custom_event(manager->view_dispatcher, GuiManagerEventBleDataReceived);
 }
 
@@ -118,7 +133,7 @@ GuiManager* GuiManagerAlloc(void) {
   view_dispatcher_set_event_callback_context(manager->view_dispatcher, manager);
   view_dispatcher_set_custom_event_callback(manager->view_dispatcher, CustomEventCallback);
 
-  manager->command_queue = furi_message_queue_alloc(16, 2);
+  manager->command_queue = furi_message_queue_alloc(16, 3);
   
   manager->submenu = submenu_alloc();
   submenu_set_header(manager->submenu, "HID Remote");

@@ -2,22 +2,33 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Flipper HID Remote</title>
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 20px; background: #111; color: #eee; }
-        button { padding: 15px 30px; font-size: 18px; margin: 10px; cursor: pointer; border-radius: 8px; border: none; background: #ff8c00; color: white; }
+        body { font-family: sans-serif; text-align: center; padding: 10px; background: #111; color: #eee; touch-action: none; overflow: hidden; }
+        button { padding: 12px 20px; font-size: 16px; margin: 5px; cursor: pointer; border-radius: 8px; border: none; background: #ff8c00; color: white; }
         button:disabled { background: #555; }
-        #status { margin: 20px; font-weight: bold; }
-        .kb-container { margin-top: 30px; border: 1px solid #444; padding: 20px; border-radius: 12px; }
-        #hiddenInput { opacity: 0; position: absolute; z-index: -1; }
-        .icon { font-size: 40px; cursor: pointer; margin: 20px; display: inline-block; }
-        .mod-panel { display: flex; justify-content: center; flex-wrap: wrap; margin: 20px; }
-        .mod-btn { background: #333; color: #aaa; width: 60px; height: 60px; line-height: 60px; border-radius: 50%; margin: 5px; cursor: pointer; border: 2px solid #555; font-weight: bold; }
+        #status { margin: 10px; font-weight: bold; }
+        
+        .panel { border: 1px solid #444; padding: 15px; border-radius: 12px; margin-bottom: 20px; background: #1a1a1a; }
+        
+        .mod-panel { display: flex; justify-content: center; flex-wrap: wrap; }
+        .mod-btn { background: #333; color: #aaa; width: 50px; height: 50px; line-height: 50px; border-radius: 50%; margin: 5px; cursor: pointer; border: 2px solid #555; font-weight: bold; font-size: 12px; }
         .mod-btn.active { background: #00bcd4; color: white; border-color: #eee; }
-        .shortcut-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; margin: 20px; }
-        .shortcut-btn { background: #222; border: 1px solid #444; padding: 10px; border-radius: 6px; cursor: pointer; }
-        .os-toggle { margin: 20px; padding: 10px; border: 1px solid #444; border-radius: 8px; display: inline-block; }
+        
+        #trackpad { width: 100%; height: 300px; background: #222; border: 2px solid #444; border-radius: 15px; margin: 20px 0; touch-action: none; position: relative; overflow: hidden; cursor: crosshair; }
+        #trackpad::after { content: 'CLICK TO LOCK CURSOR'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #444; font-weight: bold; pointer-events: none; font-size: 14px; }
+        
+        .mouse-btns { display: flex; gap: 10px; margin-bottom: 20px; }
+        .mouse-btn { flex: 1; height: 70px; background: #333; border: 2px solid #444; border-radius: 10px; line-height: 70px; font-weight: bold; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
+        .mouse-btn:active { background: #00bcd4; color: #fff; }
+
+        .shortcut-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 8px; }
+        .shortcut-btn { background: #222; border: 1px solid #444; padding: 8px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+
+        #hiddenInput { opacity: 0; position: absolute; z-index: -1; }
+        .icon { font-size: 30px; cursor: pointer; margin: 10px; display: inline-block; }
+        .os-toggle { margin: 10px; padding: 5px; border: 1px solid #444; border-radius: 8px; display: inline-block; font-size: 14px; }
     </style>
 </head>
 <body>
@@ -28,39 +39,50 @@
 
     <div class="os-toggle">
         Target OS: 
-        <select id="osSelect" style="background: #222; color: #fff; padding: 5px;">
+        <select id="osSelect" style="background: #222; color: #fff; padding: 5px; border: none;">
             <option value="pc">Windows/Linux (Ctrl)</option>
             <option value="ios">iPhone/Mac (Cmd)</option>
         </select>
     </div>
 
-    <div class="mod-panel">
-        <div class="mod-btn" id="ctrlBtn" data-bit="0x01">Ctrl</div>
-        <div class="mod-btn" id="shiftBtn" data-bit="0x02">Shift</div>
-        <div class="mod-btn" id="altBtn" data-bit="0x04">Alt</div>
-        <div class="mod-btn" id="cmdBtn" data-bit="0x08">Cmd</div>
+    <div id="trackpad"></div>
+
+    <div class="mouse-btns">
+        <div class="mouse-btn" id="leftClickBtn">LEFT</div>
+        <div class="mouse-btn" id="rightClickBtn">RIGHT</div>
     </div>
 
-    <div class="shortcut-grid">
-        <div class="shortcut-btn" id="copyBtn">Copy (C)</div>
-        <div class="shortcut-btn" id="pasteBtn">Paste (V)</div>
-        <div class="shortcut-btn" id="undoBtn">Undo (Z)</div>
-        <div class="shortcut-btn" id="saveBtn">Save (S)</div>
+    <div class="panel">
+        <div class="mod-panel">
+            <div class="mod-btn" id="ctrlBtn" data-bit="0x01">Ctrl</div>
+            <div class="mod-btn" id="shiftBtn" data-bit="0x02">Shift</div>
+            <div class="mod-btn" id="altBtn" data-bit="0x04">Alt</div>
+            <div class="mod-btn" id="cmdBtn" data-bit="0x08">Cmd</div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="shortcut-grid">
+            <div class="shortcut-btn" id="copyBtn">Copy (C)</div>
+            <div class="shortcut-btn" id="pasteBtn">Paste (V)</div>
+            <div class="shortcut-btn" id="undoBtn">Undo (Z)</div>
+            <div class="shortcut-btn" id="saveBtn">Save (S)</div>
+        </div>
     </div>
     
-    <div class="kb-container">
+    <div>
         <div id="kbIcon" class="icon" title="Open Keyboard">⌨️</div>
         <input type="text" id="hiddenInput" autocapitalize="none" autocomplete="off" spellcheck="false">
-        <p>Tap the keyboard icon or use your PC keyboard.</p>
     </div>
 
-    <script src="app.js?v=24"></script>
+    <script src="app.js?v=29"></script>
     <script>
         const connectBtn = document.getElementById('connectBtn');
         const statusDiv = document.getElementById('status');
         const kbIcon = document.getElementById('kbIcon');
         const hiddenInput = document.getElementById('hiddenInput');
         const osSelect = document.getElementById('osSelect');
+        const trackpad = document.getElementById('trackpad');
 
         let currentMods = 0;
         let bleQueue = [];
@@ -68,20 +90,13 @@
 
         const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-        // STRICT SEQUENTIAL QUEUE
         const queueSend = async (actionFn) => {
             bleQueue.push(actionFn);
             if (bleProcessing) return;
-            
             bleProcessing = true;
             while (bleQueue.length > 0) {
                 const fn = bleQueue.shift();
-                try {
-                    await fn();
-                    await sleep(60); // Essential cool-down for Flipper buffer
-                } catch (e) {
-                    console.error("BLE Queue Error:", e);
-                }
+                try { await fn(); await sleep(10); } catch (e) { console.error(e); }
             }
             bleProcessing = false;
         };
@@ -91,82 +106,126 @@
             if (await connectToFlipper()) {
                 statusDiv.textContent = 'Connected to Flipper';
                 connectBtn.disabled = true;
-            } else {
-                statusDiv.textContent = 'Connection failed';
-            }
+            } else { statusDiv.textContent = 'Connection failed'; }
         });
 
         kbIcon.addEventListener('click', () => { hiddenInput.focus(); });
 
-        // Normal typing
         hiddenInput.addEventListener('input', (e) => {
             const char = e.data;
-            if (char && char.length === 1) {
-                queueSend(() => sendKeyToFlipper(char));
-            }
+            if (char && char.length === 1) queueSend(() => sendKeyToFlipper(char));
             hiddenInput.value = '';
         });
 
-        // Shortcuts and Modifiers
+        // TRACKPAD LOGIC
+        let pendingDX = 0;
+        let pendingDY = 0;
+        let lastMoveX = 0;
+        let lastMoveY = 0;
+        let isTouching = false;
+        let startTime = 0;
+
+        // POINTER LOCK FOR PC
+        trackpad.addEventListener('click', () => {
+            if (osSelect.value === 'pc') {
+                trackpad.requestPointerLock();
+            } else {
+                // Tap to click for mobile
+                queueSend(async () => {
+                    await sendMouseButtonToFlipper(0x01);
+                    await sleep(30);
+                    await sendMouseButtonToFlipper(0x00);
+                });
+            }
+        });
+
+        const handleStart = (x, y) => { isTouching = true; lastMoveX = x; lastMoveY = y; startTime = Date.now(); };
+        const handleMove = (x, y, movementX, movementY) => {
+            if (document.pointerLockElement === trackpad) {
+                pendingDX += movementX * 1.2;
+                pendingDY += movementY * 1.2;
+            } else if (isTouching) {
+                pendingDX += (x - lastMoveX) * 1.5;
+                pendingDY += (y - lastMoveY) * 1.5;
+                lastMoveX = x; lastMoveY = y;
+            }
+        };
+
+        trackpad.addEventListener('touchstart', (e) => { handleStart(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault(); });
+        trackpad.addEventListener('touchmove', (e) => { handleMove(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault(); });
+        trackpad.addEventListener('touchend', () => { isTouching = false; });
+
+        window.addEventListener('mousemove', (e) => {
+            handleMove(e.clientX, e.clientY, e.movementX, e.movementY);
+        });
+
+        // SCROLL WHEEL SUPPORT
+        window.addEventListener('wheel', (e) => {
+            if (document.pointerLockElement === trackpad || isTouching) {
+                e.preventDefault();
+                const delta = e.deltaY > 0 ? -1 : 1;
+                queueSend(() => sendMouseScrollToFlipper(delta));
+            }
+        }, { passive: false });
+
+        setInterval(() => {
+            if (Math.abs(pendingDX) > 0.5 || Math.abs(pendingDY) > 0.5) {
+                const dx = Math.round(pendingDX);
+                const dy = Math.round(pendingDY);
+                queueSend(() => sendMousePosToFlipper(dx, dy));
+                pendingDX = 0; pendingDY = 0;
+            }
+        }, 20);
+
+        const btnHandler = (id, mask) => {
+            const btn = document.getElementById(id);
+            const down = () => queueSend(() => sendMouseButtonToFlipper(mask));
+            const up = () => queueSend(() => sendMouseButtonToFlipper(0x00));
+            btn.addEventListener('mousedown', down);
+            btn.addEventListener('mouseup', up);
+            btn.addEventListener('touchstart', (e) => { down(); e.preventDefault(); });
+            btn.addEventListener('touchend', up);
+        };
+        btnHandler('leftClickBtn', 0x01);
+        btnHandler('rightClickBtn', 0x02);
+
+        // MODIFIERS & SHORTCUTS
         window.addEventListener('keydown', (e) => {
             const isIOS = osSelect.value === 'ios';
-            
-            // 1. Sync Modifiers
-            let newMods = 0;
-            if (e.shiftKey) newMods |= 0x02;
-            if (e.altKey) newMods |= 0x04;
-            if (e.ctrlKey) newMods |= isIOS ? 0x08 : 0x01; // Auto-map PC-Ctrl to iOS-Cmd
-            if (e.metaKey) newMods |= 0x08;
+            let newMods = currentMods;
+            if (e.key === 'Shift') newMods |= 0x02;
+            if (e.key === 'Alt') newMods |= 0x04;
+            if (e.key === 'Control') newMods |= isIOS ? 0x08 : 0x01;
+            if (e.key === 'Meta') newMods |= 0x08;
 
             if (newMods !== currentMods) {
                 currentMods = newMods;
                 queueSend(() => sendModifiersToFlipper(currentMods));
-                // UI Sync
                 document.getElementById('ctrlBtn').classList.toggle('active', !!(currentMods & 0x01));
                 document.getElementById('shiftBtn').classList.toggle('active', !!(currentMods & 0x02));
                 document.getElementById('altBtn').classList.toggle('active', !!(currentMods & 0x04));
                 document.getElementById('cmdBtn').classList.toggle('active', !!(currentMods & 0x08));
             }
 
-            // 2. Handle Shortcuts (Ctrl/Cmd + Key)
-            if (e.ctrlKey || e.metaKey || e.altKey) {
-                // If it's a single letter, the 'input' event won't fire, so we catch it here
-                if (e.key.length === 1 && e.key !== 'Control' && e.key !== 'Alt' && e.key !== 'Shift' && e.key !== 'Meta') {
-                    e.preventDefault();
-                    queueSend(() => sendKeyToFlipper(e.key.toLowerCase()));
-                }
-            }
-
-            // 3. Special Keys
-            if (e.key === 'Backspace' || e.key === 'Enter' || e.key === 'Delete') {
-                if (document.activeElement === hiddenInput || e.ctrlKey || e.metaKey) {
-                    e.preventDefault();
-                    if (e.key === 'Enter') {
-                        queueSend(() => sendKeyToFlipper('\n'));
-                    } else if (e.key === 'Backspace') {
-                        queueSend(async () => {
-                            await sendKeyDownToFlipper(0x2A);
-                            await sleep(30);
-                            await sendKeyUpToFlipper(0x2A);
-                        });
-                    } else if (e.key === 'Delete') {
-                        queueSend(async () => {
-                            await sendKeyDownToFlipper(0x4C);
-                            await sleep(30);
-                            await sendKeyUpToFlipper(0x4C);
-                        });
-                    }
-                }
+            if (['Backspace', 'Enter', 'Delete', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                e.preventDefault();
+                if (e.key === 'Enter') queueSend(() => sendKeyToFlipper('\n'));
+                else if (e.key === 'Backspace') queueSend(async () => { await sendKeyDownToFlipper(0x2A); await sleep(30); await sendKeyUpToFlipper(0x2A); });
+                else if (e.key === 'Delete') queueSend(async () => { await sendKeyDownToFlipper(0x4C); await sleep(30); await sendKeyUpToFlipper(0x4C); });
+                else if (e.key === 'ArrowRight') queueSend(async () => { await sendKeyDownToFlipper(0x4F); await sleep(30); await sendKeyUpToFlipper(0x4F); });
+                else if (e.key === 'ArrowLeft') queueSend(async () => { await sendKeyDownToFlipper(0x50); await sleep(30); await sendKeyUpToFlipper(0x50); });
+                else if (e.key === 'ArrowDown') queueSend(async () => { await sendKeyDownToFlipper(0x51); await sleep(30); await sendKeyUpToFlipper(0x51); });
+                else if (e.key === 'ArrowUp') queueSend(async () => { await sendKeyDownToFlipper(0x52); await sleep(30); await sendKeyUpToFlipper(0x52); });
             }
         });
 
         window.addEventListener('keyup', (e) => {
             const isIOS = osSelect.value === 'ios';
-            let newMods = 0;
-            if (e.shiftKey) newMods |= 0x02;
-            if (e.altKey) newMods |= 0x04;
-            if (e.ctrlKey) newMods |= isIOS ? 0x08 : 0x01;
-            if (e.metaKey) newMods |= 0x08;
+            let newMods = currentMods;
+            if (e.key === 'Shift') newMods &= ~0x02;
+            if (e.key === 'Alt') newMods &= ~0x04;
+            if (e.key === 'Control') newMods &= ~(isIOS ? 0x08 : 0x01);
+            if (e.key === 'Meta') newMods &= ~0x08;
 
             if (newMods !== currentMods) {
                 currentMods = newMods;
@@ -176,33 +235,6 @@
                 document.getElementById('altBtn').classList.toggle('active', !!(currentMods & 0x04));
                 document.getElementById('cmdBtn').classList.toggle('active', !!(currentMods & 0x08));
             }
-        });
-
-        // Manual Buttons
-        const manualShortcut = (keyChar) => {
-            const isIOS = osSelect.value === 'ios';
-            const mod = isIOS ? 0x08 : 0x01;
-            queueSend(async () => {
-                await sendModifiersToFlipper(currentMods | mod);
-                await sleep(40);
-                await sendKeyToFlipper(keyChar);
-                await sleep(40);
-                await sendModifiersToFlipper(currentMods);
-            });
-        };
-
-        document.getElementById('copyBtn').addEventListener('click', () => manualShortcut('c'));
-        document.getElementById('pasteBtn').addEventListener('click', () => manualShortcut('v'));
-        document.getElementById('undoBtn').addEventListener('click', () => manualShortcut('z'));
-        document.getElementById('saveBtn').addEventListener('click', () => manualShortcut('s'));
-
-        document.querySelectorAll('.mod-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const bit = parseInt(btn.getAttribute('data-bit'), 16);
-                currentMods ^= bit;
-                btn.classList.toggle('active');
-                queueSend(() => sendModifiersToFlipper(currentMods));
-            });
         });
     </script>
 </body>
