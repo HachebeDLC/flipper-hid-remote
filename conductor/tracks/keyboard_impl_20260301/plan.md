@@ -1,13 +1,13 @@
 # Implementation Plan: Full Keyboard Implementation
 
-## Phase 1: Protocol and Core Extension
+## Phase 1: Protocol and Core Extension [checkpoint: 5ff32f8]
 - [x] Task: Extend Protocol for Modifiers [4941530]
     - [x] Update `protocol.h` and `protocol.c` to support modifier masks.
     - [x] Implement `Key Down` and `Key Up` packet types.
 - [x] Task: Update HID Injector [4941530]
     - [x] Modify `hid_injector.c` to maintain a persistent modifier state.
     - [x] Update injection functions to apply active modifiers to keystrokes.
-- [ ] Task: Conductor - User Manual Verification 'Phase 1: Protocol and Core Extension' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 1: Protocol and Core Extension' (Protocol in workflow.md) [5ff32f8]
 
 ## Phase 2: Web Dashboard Keyboard UI
 - [ ] Task: Native Keyboard Trigger
