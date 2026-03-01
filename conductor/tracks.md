@@ -13,5 +13,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 - [x] **Track: Mouse and Trackpad Support** (completed)
   *Link: [./archive/mouse_support_20260301/](./archive/mouse_support_20260301/)*
 
-- [~] **Track: Quality of Life Improvements** (in progress)
-  *Link: [./tracks/qol_improvements_20260301/](./tracks/qol_improvements_20260301/)*
+- [x] **Track: Quality of Life Improvements** (completed)
+  *Link: [./archive/qol_improvements_20260301/](./archive/qol_improvements_20260301/)*
