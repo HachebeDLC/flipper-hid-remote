@@ -19,7 +19,7 @@ int FlipperAppRunE2e(void) {
   furi_hal_vibro_on(false);
   
   // 2. Start BLE Listener
-  if (FlipperBleListenerStart() != 0) return -1;
+  if (FlipperBleListenerStart(NULL) != 0) return -1;
   
   // 3. Simulate receiving a valid Keyboard packet from the phone
   puts("Simulating BLE RX: Valid Keyboard Packet ('z')...");

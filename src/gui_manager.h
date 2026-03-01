@@ -10,13 +10,19 @@ typedef struct {
   ViewDispatcher* view_dispatcher;
   Submenu* submenu;
   VariableItemList* variable_item_list;
+  
+  VariableItem* ble_status_item;
+  VariableItem* last_byte_item;
+  
+  uint8_t ble_buffer[4];
+  size_t ble_buffer_size;
+  
+  // Debug counters
+  uint32_t packets_received;
+  uint8_t last_byte;
 } GuiManager;
 
-// Initializes the GUI manager. Returns a pointer to the manager or NULL on failure.
 GuiManager* GuiManagerAlloc(void);
-
-// Frees the GUI manager and its resources.
 void GuiManagerFree(GuiManager* manager);
-
-// Switches to the main menu view.
 void GuiManagerShowMenu(GuiManager* manager);
+void GuiManagerHandleBleData(GuiManager* manager, const uint8_t* data, size_t size);

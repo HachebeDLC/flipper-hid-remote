@@ -3,7 +3,7 @@ App(
     name="HID Remote",
     apptype=FlipperAppType.EXTERNAL,
     entry_point="flipper_kb_app",
-    stack_size=2 * 1024,
+    stack_size=4 * 1024,
     fap_category="USB",
     fap_description="USB Mouse and Keyboard controlled via BLE",
 )
