@@ -17,7 +17,7 @@
         .mod-btn.active { background: #00bcd4; color: white; border-color: #eee; }
         
         #trackpad { width: 100%; height: 300px; background: #222; border: 2px solid #444; border-radius: 15px; margin: 20px 0; touch-action: none; position: relative; overflow: hidden; cursor: crosshair; }
-        #trackpad::after { content: 'CLICK TO LOCK CURSOR'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #444; font-weight: bold; pointer-events: none; font-size: 14px; }
+        #trackpad::after { content: 'TRACKPAD'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #444; font-weight: bold; pointer-events: none; font-size: 14px; }
         
         .mouse-btns { display: flex; gap: 10px; margin-bottom: 20px; }
         .mouse-btn { flex: 1; height: 70px; background: #333; border: 2px solid #444; border-radius: 10px; line-height: 70px; font-weight: bold; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
@@ -29,6 +29,9 @@
         #hiddenInput { opacity: 0; position: absolute; z-index: -1; }
         .icon { font-size: 30px; cursor: pointer; margin: 10px; display: inline-block; }
         .os-toggle { margin: 10px; padding: 5px; border: 1px solid #444; border-radius: 8px; display: inline-block; font-size: 14px; }
+        
+        .slider-box { margin: 10px; padding: 10px; border: 1px solid #444; border-radius: 8px; display: inline-block; font-size: 14px; }
+        input[type=range] { vertical-align: middle; }
     </style>
 </head>
 <body>
@@ -43,6 +46,12 @@
             <option value="pc">Windows/Linux (Ctrl)</option>
             <option value="ios">iPhone/Mac (Cmd)</option>
         </select>
+    </div>
+
+    <div class="slider-box">
+        Sensitivity: 
+        <input type="range" id="senseSlider" min="0.5" max="4.0" step="0.1" value="1.5">
+        <span id="senseVal">1.5x</span>
     </div>
 
     <div id="trackpad"></div>
@@ -75,7 +84,7 @@
         <input type="text" id="hiddenInput" autocapitalize="none" autocomplete="off" spellcheck="false">
     </div>
 
-    <script src="app.js?v=29"></script>
+    <script src="app.js?v=30"></script>
     <script>
         const connectBtn = document.getElementById('connectBtn');
         const statusDiv = document.getElementById('status');
@@ -83,10 +92,25 @@
         const hiddenInput = document.getElementById('hiddenInput');
         const osSelect = document.getElementById('osSelect');
         const trackpad = document.getElementById('trackpad');
+        const senseSlider = document.getElementById('senseSlider');
+        const senseVal = document.getElementById('senseVal');
 
         let currentMods = 0;
         let bleQueue = [];
         let bleProcessing = false;
+        let sensitivity = parseFloat(localStorage.getItem('fkb_sense') || "1.5");
+
+        // Load Persisted Web Settings
+        osSelect.value = localStorage.getItem('fkb_os') || "pc";
+        senseSlider.value = sensitivity;
+        senseVal.textContent = sensitivity.toFixed(1) + "x";
+
+        osSelect.addEventListener('change', () => localStorage.setItem('fkb_os', osSelect.value));
+        senseSlider.addEventListener('input', () => {
+            sensitivity = parseFloat(senseSlider.value);
+            senseVal.textContent = sensitivity.toFixed(1) + "x";
+            localStorage.setItem('fkb_sense', sensitivity);
+        });
 
         const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -125,28 +149,21 @@
         let isTouching = false;
         let startTime = 0;
 
-        // POINTER LOCK FOR PC
         trackpad.addEventListener('click', () => {
-            if (osSelect.value === 'pc') {
-                trackpad.requestPointerLock();
-            } else {
-                // Tap to click for mobile
-                queueSend(async () => {
-                    await sendMouseButtonToFlipper(0x01);
-                    await sleep(30);
-                    await sendMouseButtonToFlipper(0x00);
-                });
+            if (osSelect.value === 'pc') trackpad.requestPointerLock();
+            else {
+                queueSend(async () => { await sendMouseButtonToFlipper(0x01); await sleep(30); await sendMouseButtonToFlipper(0x00); });
             }
         });
 
         const handleStart = (x, y) => { isTouching = true; lastMoveX = x; lastMoveY = y; startTime = Date.now(); };
         const handleMove = (x, y, movementX, movementY) => {
             if (document.pointerLockElement === trackpad) {
-                pendingDX += movementX * 1.2;
-                pendingDY += movementY * 1.2;
+                pendingDX += movementX * sensitivity;
+                pendingDY += movementY * sensitivity;
             } else if (isTouching) {
-                pendingDX += (x - lastMoveX) * 1.5;
-                pendingDY += (y - lastMoveY) * 1.5;
+                pendingDX += (x - lastMoveX) * sensitivity;
+                pendingDY += (y - lastMoveY) * sensitivity;
                 lastMoveX = x; lastMoveY = y;
             }
         };
@@ -155,11 +172,8 @@
         trackpad.addEventListener('touchmove', (e) => { handleMove(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault(); });
         trackpad.addEventListener('touchend', () => { isTouching = false; });
 
-        window.addEventListener('mousemove', (e) => {
-            handleMove(e.clientX, e.clientY, e.movementX, e.movementY);
-        });
+        window.addEventListener('mousemove', (e) => handleMove(e.clientX, e.clientY, e.movementX, e.movementY));
 
-        // SCROLL WHEEL SUPPORT
         window.addEventListener('wheel', (e) => {
             if (document.pointerLockElement === trackpad || isTouching) {
                 e.preventDefault();
@@ -189,7 +203,6 @@
         btnHandler('leftClickBtn', 0x01);
         btnHandler('rightClickBtn', 0x02);
 
-        // MODIFIERS & SHORTCUTS
         window.addEventListener('keydown', (e) => {
             const isIOS = osSelect.value === 'ios';
             let newMods = currentMods;

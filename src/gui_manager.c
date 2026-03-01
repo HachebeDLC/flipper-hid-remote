@@ -3,6 +3,7 @@
 #include "ble_listener.h"
 #include "protocol.h"
 #include "hid_injector.h"
+#include "settings.h"
 #include <furi.h>
 #include <furi_hal_vibro.h>
 #include <storage/storage.h>
@@ -28,7 +29,8 @@ static uint32_t StatusViewBackCallback(void* context) {
 }
 
 static uint32_t SettingsViewBackCallback(void* context) {
-  UNUSED(context);
+  GuiManager* manager = context;
+  FlipperKbConfigSave(&manager->config);
   return GuiManagerViewMenu;
 }
 
@@ -49,16 +51,29 @@ static void LayoutChangeCallback(VariableItem* item) {
 
     if (dialog_file_browser_show(manager->dialogs, path, path, &browser_options)) {
         if (FlipperHidLayoutLoadFile(furi_string_get_cstr(path))) {
+            strncpy(manager->config.layout_path, furi_string_get_cstr(path), sizeof(manager->config.layout_path));
+            
             size_t last_slash = furi_string_search_rchar(path, '/');
             const char* filename = (last_slash != FURI_STRING_FAILURE) ? 
                 furi_string_get_cstr(path) + last_slash + 1 : furi_string_get_cstr(path);
             variable_item_set_current_value_text(item, filename);
+            FlipperKbConfigSave(&manager->config);
         } else {
             variable_item_set_current_value_text(item, "Load Fail");
         }
     }
     furi_string_free(path);
 }
+
+static void VibroChangeCallback(VariableItem* item) {
+    GuiManager* manager = variable_item_get_context(item);
+    uint8_t index = variable_item_get_current_value_index(item);
+    manager->config.vibro_enabled = (index == 1);
+    variable_item_set_current_value_text(item, manager->config.vibro_enabled ? "ON" : "OFF");
+    FlipperKbConfigSave(&manager->config);
+}
+
+static uint8_t current_modifiers_mask = 0;
 
 static bool CustomEventCallback(void* context, uint32_t event) {
   GuiManager* manager = context;
@@ -83,6 +98,11 @@ static bool CustomEventCallback(void* context, uint32_t event) {
         if (packet[0] == 0x02) {
             snprintf(buf, sizeof(buf), "Mouse: %d, %d", (int8_t)packet[1], (int8_t)packet[2]);
             variable_item_set_current_value_text(manager->last_byte_item, buf);
+        } else if (packet[0] == 0x05) {
+            // Modifier Update
+            current_modifiers_mask = packet[1];
+            snprintf(buf, sizeof(buf), "Mods: 0x%02X", current_modifiers_mask);
+            variable_item_set_current_value_text(manager->last_byte_item, buf);
         } else {
             snprintf(buf, sizeof(buf), "0x%02X", manager->last_byte);
             variable_item_set_current_value_text(manager->last_byte_item, buf);
@@ -93,10 +113,25 @@ static bool CustomEventCallback(void* context, uint32_t event) {
 
     snprintf(buf, sizeof(buf), "Pkts: %lu", manager->packets_received);
     variable_item_set_current_value_text(manager->ble_status_item, buf);
+    
+    // Update Submenu Header with active modifiers for better visibility
+    if (current_modifiers_mask == 0) {
+        submenu_set_header(manager->submenu, "HID Remote (Active)");
+    } else {
+        FuriString* mod_str = furi_string_alloc_set("Mods:");
+        if (current_modifiers_mask & 0x01) furi_string_cat(mod_str, " ^"); // Ctrl
+        if (current_modifiers_mask & 0x02) furi_string_cat(mod_str, " S"); // Shift
+        if (current_modifiers_mask & 0x04) furi_string_cat(mod_str, " A"); // Alt
+        if (current_modifiers_mask & 0x08) furi_string_cat(mod_str, " G"); // GUI/Cmd
+        submenu_set_header(manager->submenu, furi_string_get_cstr(mod_str));
+        furi_string_free(mod_str);
+    }
 
-    furi_hal_vibro_on(true);
-    furi_delay_ms(10);
-    furi_hal_vibro_on(false);
+    if (manager->config.vibro_enabled) {
+        furi_hal_vibro_on(true);
+        furi_delay_ms(10);
+        furi_hal_vibro_on(false);
+    }
 
     FlipperBleNotifyEmpty();
     return true;
@@ -123,7 +158,14 @@ static uint32_t MenuBackCallback(void* context) {
 
 GuiManager* GuiManagerAlloc(void) {
   GuiManager* manager = calloc(1, sizeof(GuiManager));
-  FlipperHidLayoutLoadDefault();
+  
+  // 1. Load Config
+  FlipperKbConfigLoad(&manager->config);
+  
+  // 2. Initialize Layout
+  if (strcmp(manager->config.layout_path, "default") == 0 || !FlipperHidLayoutLoadFile(manager->config.layout_path)) {
+      FlipperHidLayoutLoadDefault();
+  }
   
   manager->gui = furi_record_open(RECORD_GUI);
   manager->dialogs = furi_record_open(RECORD_DIALOGS);
@@ -138,7 +180,7 @@ GuiManager* GuiManagerAlloc(void) {
   manager->submenu = submenu_alloc();
   submenu_set_header(manager->submenu, "HID Remote");
   submenu_add_item(manager->submenu, "Start Remote", GuiManagerEventStartRemote, SubmenuCallback, manager);
-  submenu_add_item(manager->submenu, "Layout Settings", GuiManagerEventOpenSettings, SubmenuCallback, manager);
+  submenu_add_item(manager->submenu, "Settings", GuiManagerEventOpenSettings, SubmenuCallback, manager);
   view_set_previous_callback(submenu_get_view(manager->submenu), MenuBackCallback);
   view_dispatcher_add_view(manager->view_dispatcher, GuiManagerViewMenu, submenu_get_view(manager->submenu));
   
@@ -150,9 +192,21 @@ GuiManager* GuiManagerAlloc(void) {
   view_set_previous_callback(variable_item_list_get_view(manager->variable_item_list), StatusViewBackCallback);
   view_dispatcher_add_view(manager->view_dispatcher, GuiManagerViewStatus, variable_item_list_get_view(manager->variable_item_list));
 
+  // Settings View
   manager->settings_list = variable_item_list_alloc();
+  
   manager->layout_item = variable_item_list_add(manager->settings_list, "Layout", 0, LayoutChangeCallback, manager);
-  variable_item_set_current_value_text(manager->layout_item, "US (Default)");
+  if (strcmp(manager->config.layout_path, "default") == 0) {
+      variable_item_set_current_value_text(manager->layout_item, "US (Default)");
+  } else {
+      const char* last_slash = strrchr(manager->config.layout_path, '/');
+      variable_item_set_current_value_text(manager->layout_item, last_slash ? last_slash + 1 : manager->config.layout_path);
+  }
+
+  manager->vibro_item = variable_item_list_add(manager->settings_list, "Vibration", 2, VibroChangeCallback, manager);
+  variable_item_set_current_value_index(manager->vibro_item, manager->config.vibro_enabled ? 1 : 0);
+  variable_item_set_current_value_text(manager->vibro_item, manager->config.vibro_enabled ? "ON" : "OFF");
+
   view_set_previous_callback(variable_item_list_get_view(manager->settings_list), SettingsViewBackCallback);
   view_dispatcher_add_view(manager->view_dispatcher, GuiManagerViewSettings, variable_item_list_get_view(manager->settings_list));
   

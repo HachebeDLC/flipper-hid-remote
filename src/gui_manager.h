@@ -5,6 +5,7 @@
 #include <gui/modules/submenu.h>
 #include <gui/modules/variable_item_list.h>
 #include <dialogs/dialogs.h>
+#include "settings.h"
 
 typedef struct {
   Gui* gui;
@@ -14,9 +15,12 @@ typedef struct {
   VariableItemList* settings_list;
   DialogsApp* dialogs;
   
+  FlipperKbConfig config;
+  
   VariableItem* ble_status_item;
   VariableItem* last_byte_item;
   VariableItem* layout_item;
+  VariableItem* vibro_item;
   
   FuriMessageQueue* command_queue;
   
