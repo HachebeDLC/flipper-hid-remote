@@ -31,32 +31,50 @@ async function connectToFlipper() {
     }
 }
 
-async function sendKeyToFlipper(key) {
+async function sendData(data) {
     if (!flipperRxCharacteristic) {
         console.error('Not connected!');
         return;
     }
-
-    try {
-        // Our protocol: [0x01 (Type: Keyboard), char key]
-        const data = new Uint8Array([0x01, key.charCodeAt(0)]);
-        
-        console.log(`Sending RAW HID packet for key "${key}"...`);
-        
-        // Flipper Serial expects Writes Without Response for high-speed serial data
-        if (flipperRxCharacteristic.properties.writeWithoutResponse) {
-             await flipperRxCharacteristic.writeValueWithoutResponse(data);
-        } else {
-             await flipperRxCharacteristic.writeValue(data);
-        }
-        
-        console.log('Sent!');
-    } catch (error) {
-        console.error('Failed to send key!', error);
+    if (flipperRxCharacteristic.properties.writeWithoutResponse) {
+        await flipperRxCharacteristic.writeValueWithoutResponse(data);
+    } else {
+        await flipperRxCharacteristic.writeValue(data);
     }
+}
+
+async function sendKeyToFlipper(key) {
+    console.log(`Sending RAW HID packet for key "${key}"...`);
+    const data = new Uint8Array([0x01, key.charCodeAt(0)]);
+    await sendData(data);
+}
+
+async function sendKeyDownToFlipper(hidCode) {
+    console.log(`Sending Key Down: 0x${hidCode.toString(16)}`);
+    const data = new Uint8Array([0x03, hidCode]);
+    await sendData(data);
+}
+
+async function sendKeyUpToFlipper(hidCode) {
+    console.log(`Sending Key Up: 0x${hidCode.toString(16)}`);
+    const data = new Uint8Array([0x04, hidCode]);
+    await sendData(data);
+}
+
+async function sendModifiersToFlipper(mask) {
+    console.log(`Sending Modifiers: 0x${mask.toString(16)}`);
+    const data = new Uint8Array([0x05, mask]);
+    await sendData(data);
 }
 
 // Export for testing
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { connectToFlipper, sendKeyToFlipper };
+    module.exports = { 
+        connectToFlipper, 
+        sendKeyToFlipper,
+        sendKeyDownToFlipper,
+        sendKeyUpToFlipper,
+        sendModifiersToFlipper,
+        __setMockCharacteristic: (mock) => { flipperRxCharacteristic = mock; }
+    };
 }

@@ -4,39 +4,114 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Flipper HID Remote</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 20px; background: #111; color: #eee; }
+        button { padding: 15px 30px; font-size: 18px; margin: 10px; cursor: pointer; border-radius: 8px; border: none; background: #ff8c00; color: white; }
+        button:disabled { background: #555; }
+        #status { margin: 20px; font-weight: bold; }
+        .kb-container { margin-top: 30px; border: 1px solid #444; padding: 20px; border-radius: 12px; }
+        #hiddenInput { opacity: 0; position: absolute; z-index: -1; }
+        .icon { font-size: 40px; cursor: pointer; margin: 20px; display: inline-block; }
+        .mod-panel { display: flex; justify-content: center; flex-wrap: wrap; margin: 20px; }
+        .mod-btn { background: #333; color: #aaa; width: 60px; height: 60px; line-height: 60px; border-radius: 50%; margin: 5px; cursor: pointer; border: 2px solid #555; font-weight: bold; }
+        .mod-btn.active { background: #00bcd4; color: white; border-color: #eee; }
+        .shortcut-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; margin: 20px; }
+        .shortcut-btn { background: #222; border: 1px solid #444; padding: 10px; border-radius: 6px; cursor: pointer; }
+    </style>
 </head>
 <body>
-    <h1>Flipper HID Remote Dashboard</h1>
-    <button id="connectBtn">Connect to Flipper</button>
-    <button id="sendBtn" disabled>Send Test Key ('a')</button>
+    <h1>Flipper HID Remote</h1>
     
-    <script src="app.js?v=16"></script>
+    <div id="status">Disconnected</div>
+    <button id="connectBtn">Connect to Flipper</button>
+
+    <div class="mod-panel">
+        <div class="mod-btn" id="ctrlBtn" data-bit="0x01">Ctrl</div>
+        <div class="mod-btn" id="shiftBtn" data-bit="0x02">Shift</div>
+        <div class="mod-btn" id="altBtn" data-bit="0x04">Alt</div>
+        <div class="mod-btn" id="cmdBtn" data-bit="0x08">Cmd</div>
+    </div>
+
+    <div class="shortcut-grid">
+        <div class="shortcut-btn" id="copyBtn">Copy (C)</div>
+        <div class="shortcut-btn" id="pasteBtn">Paste (V)</div>
+        <div class="shortcut-btn" id="undoBtn">Undo (Z)</div>
+        <div class="shortcut-btn" id="saveBtn">Save (S)</div>
+    </div>
+    
+    <div class="kb-container">
+        <div id="kbIcon" class="icon" title="Open Keyboard">⌨️</div>
+        <input type="text" id="hiddenInput" autocapitalize="none" autocomplete="off" spellcheck="false">
+        <p>Tap the keyboard icon to type.</p>
+    </div>
+
+    <script src="app.js?v=18"></script>
     <script>
-        document.getElementById('connectBtn').addEventListener('click', async () => {
+        const connectBtn = document.getElementById('connectBtn');
+        const statusDiv = document.getElementById('status');
+        const kbIcon = document.getElementById('kbIcon');
+        const hiddenInput = document.getElementById('hiddenInput');
+
+        let currentMods = 0;
+
+        connectBtn.addEventListener('click', async () => {
+            statusDiv.textContent = 'Connecting...';
             const success = await connectToFlipper();
             if (success) {
-                document.getElementById('sendBtn').disabled = false;
-                document.getElementById('connectBtn').textContent = 'Connected';
+                statusDiv.textContent = 'Connected to Flipper';
+                connectBtn.disabled = true;
+            } else {
+                statusDiv.textContent = 'Connection failed';
             }
         });
-        
-        document.getElementById('sendBtn').addEventListener('click', async () => {
-            const btn = document.getElementById('sendBtn');
-            let countdown = 3;
-            btn.disabled = true;
-            
-            const interval = setInterval(() => {
-                btn.textContent = `Sending in ${countdown}...`;
-                countdown--;
-                if (countdown < 0) {
-                    clearInterval(interval);
-                    console.log('Sending HID command: key "a"');
-                    sendKeyToFlipper('a');
-                    btn.textContent = "Send Test Key ('a')";
-                    btn.disabled = false;
-                }
-            }, 1000);
+
+        kbIcon.addEventListener('click', () => {
+            hiddenInput.focus();
         });
+
+        hiddenInput.addEventListener('input', (e) => {
+            const char = e.data;
+            if (char) {
+                console.log('Typing:', char);
+                sendKeyToFlipper(char);
+                hiddenInput.value = '';
+            }
+        });
+
+        hiddenInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                sendKeyToFlipper('\n');
+            } else if (e.key === 'Backspace') {
+                sendKeyDownToFlipper(0x2A);
+                sendKeyUpToFlipper(0x2A);
+            }
+        });
+
+        // Modifier logic
+        document.querySelectorAll('.mod-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const bit = parseInt(btn.getAttribute('data-bit'), 16);
+                if (btn.classList.toggle('active')) {
+                    currentMods |= bit;
+                } else {
+                    currentMods &= ~bit;
+                }
+                sendModifiersToFlipper(currentMods);
+            });
+        });
+
+        // Shortcut logic
+        const sendShortcut = async (key) => {
+            // Temporary Ctrl
+            sendModifiersToFlipper(currentMods | 0x01);
+            sendKeyToFlipper(key);
+            sendModifiersToFlipper(currentMods);
+        };
+
+        document.getElementById('copyBtn').addEventListener('click', () => sendShortcut('c'));
+        document.getElementById('pasteBtn').addEventListener('click', () => sendShortcut('v'));
+        document.getElementById('undoBtn').addEventListener('click', () => sendShortcut('z'));
+        document.getElementById('saveBtn').addEventListener('click', () => sendShortcut('s'));
     </script>
 </body>
 </html>
