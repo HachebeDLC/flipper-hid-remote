@@ -21,7 +21,7 @@ static BleServiceBattery* battery_svc = NULL;
 #include <furi_hal_vibro.h>
 #include "gui_manager.h"
 
-// --- MOMENTUM TRUE IDENTITY SPOOF ---
+// --- MOMENTUM SEAMLESS IDENTITY SPOOF ---
 
 static FuriHalBleProfileBase* ble_profile_serial_momentum_start(FuriHalBleProfileParams profile_params) {
     return ble_profile_serial->start(profile_params);
@@ -40,16 +40,15 @@ static void ble_profile_serial_momentum_get_config(GapConfig* config, FuriHalBle
     strlcpy(config->adv_name + 1, custom_name, sizeof(config->adv_name) - 1);
     config->adv_name[0] = 0x09; // AD_TYPE_COMPLETE_LOCAL_NAME
 
-    // 2. MAC OVERRIDE: Must be Unicast! (Bit 0 of Byte 0 must be 0)
-    // We follow Momentum's BadKB logic exactly.
+    // 2. MAC OVERRIDE: Valid Unicast Local MAC
     config->mac_address[2]++;
     uint16_t mac_xor = 0x0002; 
     config->mac_address[0] ^= (mac_xor & 0xFF);
     config->mac_address[1] ^= (mac_xor >> 8);
     
-    // 3. MOMENTUM PARAMS
+    // 3. PAIRING: "Just Works" (No PIN required, instant pairing)
     config->bonding_mode = true;
-    config->pairing_method = GapPairingPinCodeVerifyYesNo;
+    config->pairing_method = GapPairingNone;
 }
 
 static const FuriHalBleProfileTemplate profile_momentum_callbacks = {
@@ -59,8 +58,6 @@ static const FuriHalBleProfileTemplate profile_momentum_callbacks = {
 };
 
 static const FuriHalBleProfileTemplate* ble_profile_momentum = &profile_momentum_callbacks;
-
-// ---------------------------------
 
 static uint16_t BleSerialCallback(SerialServiceEvent event, void* context) {
   if (event.event == SerialServiceEventTypeDataReceived) {
@@ -90,10 +87,7 @@ int FlipperBleListenerStart(void* gui_manager) {
   bt_disconnect(bt_system);
   furi_delay_ms(500);
 
-  // Use app data path for keys to ensure a clean slate for the new identity
-  Storage* storage = furi_record_open(RECORD_STORAGE);
-  storage_common_mkdir(storage, EXT_PATH("apps_data/flipper_kb"));
-  furi_record_close(RECORD_STORAGE);
+  // Dedicated key storage to isolate this identity
   bt_keys_storage_set_storage_path(bt_system, EXT_PATH("apps_data/flipper_kb/.bt_hid.keys"));
 
   ble_profile = bt_profile_start(bt_system, ble_profile_momentum, NULL);
