@@ -108,7 +108,7 @@
         <p style="font-size: 12px; color: #888;">Tap icon to type</p>
     </div>
 
-    <script src="app.js?v=47"></script>
+    <script src="app.js?v=48"></script>
     <script>
         const connectBtn = document.getElementById('connectBtn');
         const themeToggle = document.getElementById('themeToggle');
@@ -225,6 +225,10 @@
         };
         btnSetup('leftClickBtn', 0x01); btnSetup('rightClickBtn', 0x02);
 
+        const updateModUI = () => {
+            ['ctrlBtn','shiftBtn','altBtn','cmdBtn'].forEach((id,i) => document.getElementById(id).classList.toggle('active', !!(currentMods & (1<<i))));
+        };
+
         window.addEventListener('keydown', (e) => {
             const isIOSMode = osSelect.value === 'ios';
             let newMods = currentMods;
@@ -236,7 +240,7 @@
             if (newMods !== currentMods) {
                 currentMods = newMods;
                 queueSend(() => sendModifiersToFlipper(currentMods));
-                ['ctrlBtn','shiftBtn','altBtn','cmdBtn'].forEach((id,i) => document.getElementById(id).classList.toggle('active', !!(currentMods & (1<<i))));
+                updateModUI();
             }
 
             if (['Backspace', 'Enter', 'Delete', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
@@ -246,6 +250,21 @@
                     const map = {Backspace:0x2A, Delete:0x4C, ArrowRight:0x4F, ArrowLeft:0x50, ArrowDown:0x51, ArrowUp:0x52};
                     queueSend(async () => { await sendKeyDownToFlipper(map[e.key]); await sleep(30); await sendKeyUpToFlipper(map[e.key]); });
                 }
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            const isIOSMode = osSelect.value === 'ios';
+            let newMods = currentMods;
+            if (e.key === 'Shift') newMods &= ~0x02;
+            if (e.key === 'Alt') newMods &= ~0x04;
+            if (e.key === 'Control') newMods &= ~(isIOSMode ? 0x08 : 0x01);
+            if (e.key === 'Meta') newMods &= ~0x08;
+
+            if (newMods !== currentMods) {
+                currentMods = newMods;
+                queueSend(() => sendModifiersToFlipper(currentMods));
+                updateModUI();
             }
         });
         
