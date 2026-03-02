@@ -21,7 +21,7 @@ static BleServiceBattery* battery_svc = NULL;
 #include <furi_hal_vibro.h>
 #include "gui_manager.h"
 
-// --- MOMENTUM EXPLICIT SERVICE HACK ---
+// --- MOMENTUM OPTIMIZED V2 ---
 
 static FuriHalBleProfileBase* ble_profile_serial_momentum_start(FuriHalBleProfileParams profile_params) {
     return ble_profile_serial->start(profile_params);
@@ -35,23 +35,13 @@ static void ble_profile_serial_momentum_get_config(GapConfig* config, FuriHalBle
     // 1. Get standard NUS (Nordic UART Service) config
     ble_profile_serial->get_gap_config(config, profile_params);
     
-    // 2. Override Name with HID_ prefix
+    // 2. Override Name with HID_ prefix (Safely)
+    // We preserve the first byte which is the BLE AD Type (0x09 for Local Name)
+    uint8_t ad_type = config->adv_name[0];
     char custom_name[FURI_HAL_VERSION_DEVICE_NAME_LENGTH];
     snprintf(custom_name, sizeof(custom_name), "HID_%s", furi_hal_version_get_name_ptr());
     strlcpy(config->adv_name + 1, custom_name, sizeof(config->adv_name) - 1);
-
-    // 3. FORCE EXPLICIT 128-BIT UUID BROADCAST
-    // NUS UUID: 6e400001-b5a3-f393-e0a9-e50e24dcca9e
-    config->adv_service.UUID_Type = 0x02; // UUID_TYPE_128
-    static const uint8_t nus_uuid[16] = {
-        0x9e, 0xca, 0xdc, 0x24, 0x0e, 0xe5, 0xa9, 0xe0,
-        0x93, 0xf3, 0xa3, 0xb5, 0x01, 0x00, 0x40, 0x6e
-    };
-    memcpy(config->adv_service.Service_UUID_128, nus_uuid, 16);
-    
-    // 4. ENSURE STABLE PAIRING
-    config->bonding_mode = true;
-    config->pairing_method = GapPairingPinCodeShow;
+    config->adv_name[0] = ad_type;
 }
 
 static const FuriHalBleProfileTemplate profile_momentum_callbacks = {
@@ -61,7 +51,6 @@ static const FuriHalBleProfileTemplate profile_momentum_callbacks = {
 };
 
 static const FuriHalBleProfileTemplate* ble_profile_momentum = &profile_momentum_callbacks;
-// ---------------------------------
 
 static uint16_t BleSerialCallback(SerialServiceEvent event, void* context) {
   if (event.event == SerialServiceEventTypeDataReceived) {
