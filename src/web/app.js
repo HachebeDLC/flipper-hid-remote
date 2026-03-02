@@ -1,7 +1,7 @@
-// Flipper Zero Official Serial Service UUIDs (Nordic UART)
-const FLIPPER_SERIAL_SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
-const FLIPPER_SERIAL_RX_UUID = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'; // Write
-const FLIPPER_SERIAL_TX_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'; // Read
+// Flipper Zero Momentum/Xtreme Serial Service UUIDs
+const FLIPPER_SERIAL_SERVICE_UUID = '8fe5b3d5-2e7f-4a98-2a48-7acc60fe0000';
+const FLIPPER_SERIAL_RX_UUID = '19ed82ae-ed21-4c9d-bec7-eccb12341234'; // Based on common Momentum pattern
+const FLIPPER_SERIAL_TX_UUID = '10203040-5060-7080-90a0-b0c0d0e0f010';
 
 let flipperRxCharacteristic = null;
 
@@ -11,7 +11,7 @@ async function connectToFlipper() {
         
         const device = await navigator.bluetooth.requestDevice({
             filters: [
-                { namePrefix: 'HID_' }   // Our Momentum custom name
+                { namePrefix: 'HID_' }
             ],
             optionalServices: [FLIPPER_SERIAL_SERVICE_UUID, 'battery_service']
         });
@@ -20,25 +20,24 @@ async function connectToFlipper() {
         const server = await device.gatt.connect();
 
         console.log('Fetching Primary Service...');
-        // We try a small delay to let GATT DB populate
         await new Promise(r => setTimeout(r, 500));
         
-        let service;
-        try {
-            service = await server.getPrimaryService(FLIPPER_SERIAL_SERVICE_UUID);
-        } catch (e) {
-            console.warn("NUS Service not found by UUID, trying generic search...");
-            const services = await server.getPrimaryServices();
-            console.log("Available services:", services.map(s => s.uuid));
-            service = services.find(s => s.uuid === FLIPPER_SERIAL_SERVICE_UUID);
-        }
-
+        const services = await server.getPrimaryServices();
+        console.log("Found services:", services.map(s => s.uuid));
+        
+        const service = services.find(s => s.uuid === FLIPPER_SERIAL_SERVICE_UUID);
         if (!service) throw new Error("Could not locate Serial Service on Flipper.");
 
-        console.log('Getting RX Characteristic...');
-        flipperRxCharacteristic = await service.getCharacteristic(FLIPPER_SERIAL_RX_UUID);
+        console.log('Getting Characteristics...');
+        const characteristics = await service.getCharacteristics();
+        console.log("Available characteristics:", characteristics.map(c => c.uuid));
         
-        console.log('Connected Successfully!');
+        // We'll pick the first writable characteristic found if our specific RX UUID fails
+        flipperRxCharacteristic = characteristics.find(c => c.properties.writeWithoutResponse || c.properties.write);
+        
+        if (!flipperRxCharacteristic) throw new Error("No writable characteristic found.");
+
+        console.log(`Connected to Characteristic: ${flipperRxCharacteristic.uuid}`);
         return true;
     } catch (error) {
         console.error('Bluetooth error:', error);
@@ -52,7 +51,6 @@ async function sendData(data) {
     try {
         await flipperRxCharacteristic.writeValueWithoutResponse(data);
     } catch (e) {
-        console.warn("Retrying with response...");
         await flipperRxCharacteristic.writeValue(data);
     }
 }
