@@ -7,12 +7,12 @@ let flipperRxCharacteristic = null;
 
 async function connectToFlipper() {
     try {
-        console.log('Searching for Flipper devices (Aonon/flip_)...');
+        console.log('Searching for Flipper devices (HID suffix)...');
         
         const device = await navigator.bluetooth.requestDevice({
             filters: [
-                { name: 'Aonon' },
-                { namePrefix: 'flip_' }
+                { nameSuffix: ' HID' },
+                { namePrefix: 'flip_' } // Fallback for standard firmware
             ],
             optionalServices: [FLIPPER_SERIAL_SERVICE_UUID, 'battery_service']
         });
