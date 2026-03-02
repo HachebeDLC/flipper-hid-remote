@@ -10,8 +10,7 @@ async function connectToFlipper() {
     try {
         console.log('Searching for Flipper...');
         const device = await navigator.bluetooth.requestDevice({
-            acceptAllDevices: true,
-            optionalServices: [FLIPPER_SERIAL_SERVICE_UUID]
+            filters: [{ services: [FLIPPER_SERIAL_SERVICE_UUID] }]
         });
 
         console.log(`Found: ${device.name}. Connecting...`);
