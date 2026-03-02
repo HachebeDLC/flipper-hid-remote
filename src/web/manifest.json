@@ -1,17 +1,34 @@
 {
   "name": "Flipper HID Remote",
   "short_name": "HID Remote",
+  "id": "/index.html",
   "description": "Control your computer via Flipper Zero from your phone.",
-  "start_url": "./index.html",
+  "start_url": "/index.html",
   "display": "standalone",
   "background_color": "#111111",
   "theme_color": "#ff8c00",
   "icons": [
     {
-      "src": "icon.svg",
-      "sizes": "any",
+      "src": "/icon.svg",
+      "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/index.html",
+      "sizes": "1280x720",
+      "type": "text/html",
+      "form_factor": "wide",
+      "label": "Desktop View"
+    },
+    {
+      "src": "/index.html",
+      "sizes": "720x1280",
+      "type": "text/html",
+      "form_factor": "narrow",
+      "label": "Mobile View"
     }
   ]
 }
