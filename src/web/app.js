@@ -1,9 +1,8 @@
 // Flipper Zero Momentum/Xtreme Serial Service UUIDs
 const FLIPPER_SERIAL_SERVICE_UUID = '8fe5b3d5-2e7f-4a98-2a48-7acc60fe0000';
-const FLIPPER_SERIAL_RX_UUID = '19ed82ae-ed21-4c9d-bec7-eccb12341234'; // Based on common Momentum pattern
-const FLIPPER_SERIAL_TX_UUID = '10203040-5060-7080-90a0-b0c0d0e0f010';
 
 let flipperRxCharacteristic = null;
+let reconnectAttempts = 0;
 
 async function connectToFlipper() {
     try {
@@ -19,9 +18,15 @@ async function connectToFlipper() {
         console.log(`Found: ${device.name}. Connecting...`);
         const server = await device.gatt.connect();
 
-        console.log('Fetching Primary Service...');
-        await new Promise(r => setTimeout(r, 500));
+        // 1. STABILITY DELAY: Give the Flipper time to handle bonding
+        console.log('Waiting for connection stability...');
+        await new Promise(r => setTimeout(r, 1000));
         
+        if (!device.gatt.connected) {
+            throw new Error("GATT Server disconnected during handshake.");
+        }
+
+        console.log('Fetching Primary Services...');
         const services = await server.getPrimaryServices();
         console.log("Found services:", services.map(s => s.uuid));
         
@@ -32,16 +37,27 @@ async function connectToFlipper() {
         const characteristics = await service.getCharacteristics();
         console.log("Available characteristics:", characteristics.map(c => c.uuid));
         
-        // We'll pick the first writable characteristic found if our specific RX UUID fails
+        // Pick the first writable characteristic
         flipperRxCharacteristic = characteristics.find(c => c.properties.writeWithoutResponse || c.properties.write);
         
         if (!flipperRxCharacteristic) throw new Error("No writable characteristic found.");
 
-        console.log(`Connected to Characteristic: ${flipperRxCharacteristic.uuid}`);
+        console.log(`Connected Successfully to ${flipperRxCharacteristic.uuid}`);
+        reconnectAttempts = 0; // Reset on success
         return true;
     } catch (error) {
         console.error('Bluetooth error:', error);
+        
+        // 2. AUTO-RETRY LOGIC: Handle the "Bonding Disconnect" automatically
+        if ((error.name === 'NetworkError' || error.message.includes('disconnected')) && reconnectAttempts < 2) {
+            reconnectAttempts++;
+            console.warn(`Connection dropped (likely bonding). Retrying attempt ${reconnectAttempts}...`);
+            await new Promise(r => setTimeout(r, 500));
+            return connectToFlipper(); // Recursive retry
+        }
+
         alert("Connection Failed: " + error.message);
+        reconnectAttempts = 0;
         return false;
     }
 }
