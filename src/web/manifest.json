@@ -1,6 +1,6 @@
 {
   "name": "Flipper HID Remote",
-  "short_name": "Flipper HID",
+  "short_name": "HID Remote",
   "description": "Control your computer via Flipper Zero from your phone.",
   "start_url": "./index.html",
   "display": "standalone",
