@@ -4,10 +4,12 @@
 - **Language**: **C** utilizing the **Furi API**. This is the native language for Flipper Zero apps, providing direct access to hardware (USB, BLE, Display, Haptics).
 - **Build System**: **ufbt (Standalone Flipper Build Tool)**. We develop the application as a standalone project outside of the firmware tree for faster iteration and easier dependency management.
 - **Target Firmware**: **Community Firmware (Unleashed/RogueMaster)**. The application will be optimized for the expanded features and API access provided by popular community distributions, while maintaining a baseline of compatibility.
+- **Storage**: **Furi Storage API**. Used for persisting application configuration in binary format on the SD card.
 
 ## Phone Interface
 - **Language**: **TypeScript/JavaScript**.
 - **Technology**: **Web Bluetooth API**. This allows for a zero-install mobile experience where any smartphone with a modern browser can connect to the Flipper without needing a dedicated App Store download.
+- **Persistence**: **Web Storage API (localStorage)**. Used for saving dashboard preferences like Theme and Sensitivity.
 
 ## Communication & Protocol
 - **Transport**: **Bluetooth Low Energy (BLE)** using the Flipper's built-in Serial-over-BLE service.
