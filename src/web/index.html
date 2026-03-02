@@ -4,36 +4,63 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Flipper HID Remote</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ff8c00">
+    <link rel="apple-touch-icon" href="icon.svg">
     <style id="themeStyles">
         :root { --bg: #111; --text: #eee; --panel: #1a1a1a; --border: #444; --accent: #ff8c00; --btn-active: #00bcd4; }
         .light-mode { --bg: #f0f0f0; --text: #222; --panel: #fff; --border: #ccc; --accent: #e67e00; --btn-active: #0097a7; }
         
-        body { font-family: sans-serif; text-align: center; padding: 10px; background: var(--bg); color: var(--text); touch-action: none; overflow: hidden; transition: background 0.3s, color 0.3s; }
-        button { padding: 12px 20px; font-size: 16px; margin: 5px; cursor: pointer; border-radius: 8px; border: none; background: var(--accent); color: white; }
+        body { font-family: sans-serif; text-align: center; padding: 10px; background: var(--bg); color: var(--text); touch-action: none; overflow: hidden; transition: background 0.3s, color 0.3s; margin: 0; }
+        
+        button, .mouse-btn, .mod-btn { min-height: 44px; min-width: 44px; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
+        
+        button { padding: 12px 20px; font-size: 16px; margin: 5px; border-radius: 8px; border: none; background: var(--accent); color: white; font-weight: bold; }
         button:disabled { background: #555; }
         
-        .panel { border: 1px solid var(--border); padding: 15px; border-radius: 12px; margin-bottom: 20px; background: var(--panel); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .panel { border: 1px solid var(--border); padding: 15px; border-radius: 12px; margin-bottom: 15px; background: var(--panel); box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
         
-        .mod-panel { display: flex; justify-content: center; flex-wrap: wrap; }
-        .mod-btn { background: #333; color: #aaa; width: 50px; height: 50px; line-height: 50px; border-radius: 50%; margin: 5px; cursor: pointer; border: 2px solid #555; font-weight: bold; font-size: 12px; }
+        .mod-panel { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; }
+        .mod-btn { background: #333; color: #aaa; width: 55px; height: 55px; line-height: 55px; border-radius: 50%; border: 2px solid #555; font-weight: bold; font-size: 13px; }
         .mod-btn.active { background: var(--btn-active); color: white; border-color: #eee; }
         
-        #trackpad { width: 100%; height: 280px; background: var(--bg); border: 2px solid var(--border); border-radius: 15px; margin: 15px 0; touch-action: none; position: relative; overflow: hidden; cursor: crosshair; }
-        #trackpad::after { content: 'TRACKPAD'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--border); font-weight: bold; pointer-events: none; }
+        #trackpad { width: calc(100% - 4px); height: 260px; background: var(--bg); border: 2px solid var(--border); border-radius: 15px; margin: 10px 0; touch-action: none; position: relative; overflow: hidden; cursor: crosshair; box-sizing: border-box; }
+        #trackpad::after { content: 'TRACKPAD'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--border); font-weight: bold; pointer-events: none; letter-spacing: 2px; }
         
-        .mouse-btns { display: flex; gap: 10px; margin-bottom: 15px; }
-        .mouse-btn { flex: 1; height: 60px; background: var(--panel); border: 2px solid var(--border); border-radius: 10px; line-height: 60px; font-weight: bold; cursor: pointer; user-select: none; }
+        .mouse-btns { display: flex; gap: 10px; margin-bottom: 10px; }
+        .mouse-btn { flex: 1; height: 65px; background: var(--panel); border: 2px solid var(--border); border-radius: 10px; line-height: 65px; font-weight: bold; }
         .mouse-btn:active { background: var(--btn-active); color: #fff; }
 
-        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        #themeToggle { font-size: 20px; cursor: pointer; background: none; border: 1px solid var(--border); padding: 5px 10px; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: var(--panel); border-bottom: 1px solid var(--border); margin-bottom: 10px; }
+        #themeToggle { font-size: 20px; background: none; border: 1px solid var(--border); padding: 5px 12px; }
+        #status { font-weight: bold; font-size: 14px; }
 
-        .slider-box { margin: 10px 0; font-size: 14px; }
         #hiddenInput { opacity: 0; position: absolute; z-index: -1; }
-        .icon { font-size: 30px; cursor: pointer; margin: 10px; display: inline-block; }
+        .icon { font-size: 32px; margin: 10px; display: inline-block; }
+        
+        /* Modal Styles */
+        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); }
+        .modal-content { background: var(--panel); margin: 20% auto; padding: 25px; border-radius: 15px; width: 85%; max-width: 400px; color: var(--text); border: 1px solid var(--border); }
+        .modal-content h2 { color: var(--accent); margin-top: 0; }
+        .modal-content p { line-height: 1.5; font-size: 14px; }
     </style>
 </head>
 <body>
+    <div id="iosModal" class="modal">
+        <div class="modal-content">
+            <h2>iOS Detected</h2>
+            <p>Safari on iOS does not support Web Bluetooth. Please use a compatible bridge app like <strong>Bluefy</strong> or <strong>WebBLE</strong> to use this dashboard.</p>
+            <button onclick="document.getElementById('iosModal').style.display='none'">Got it</button>
+        </div>
+    </div>
+
+    <div id="httpsModal" class="modal">
+        <div class="modal-content">
+            <h2>HTTPS Required</h2>
+            <p>Web Bluetooth requires a secure connection. Please access this page via <strong>https://</strong></p>
+        </div>
+    </div>
+
     <div class="top-bar">
         <button id="themeToggle">🌙</button>
         <div id="status">Disconnected</div>
@@ -41,16 +68,16 @@
     </div>
 
     <div class="panel">
-        <div style="display: flex; justify-content: space-around; font-size: 13px;">
+        <div style="display: flex; justify-content: space-around; align-items: center; font-size: 13px;">
             <div>
-                OS: <select id="osSelect" style="background: var(--bg); color: var(--text); border: 1px solid var(--border);">
+                OS: <select id="osSelect" style="background: var(--bg); color: var(--text); border: 1px solid var(--border); padding: 5px; border-radius: 4px;">
                     <option value="pc">PC</option>
                     <option value="ios">iOS</option>
                 </select>
             </div>
-            <div class="slider-box">
-                Sense: <input type="range" id="senseSlider" min="0.5" max="4.0" step="0.1" value="1.5" style="width: 80px;">
-                <span id="senseVal">1.5x</span>
+            <div style="display: flex; align-items: center; gap: 5px;">
+                Sense: <input type="range" id="senseSlider" min="0.5" max="4.0" step="0.1" value="1.5" style="width: 70px;">
+                <span id="senseVal" style="min-width: 30px;">1.5x</span>
             </div>
         </div>
     </div>
@@ -71,13 +98,13 @@
         </div>
     </div>
     
-    <div style="display: flex; justify-content: center; align-items: center;">
+    <div style="display: flex; justify-content: center; align-items: center; margin-top: -10px;">
         <div id="kbIcon" class="icon" title="Open Keyboard">⌨️</div>
         <input type="text" id="hiddenInput" autocapitalize="none" autocomplete="off" spellcheck="false">
-        <p style="font-size: 12px; margin-left: 10px;">Tap icon to type</p>
+        <p style="font-size: 12px; color: #888;">Tap icon to type</p>
     </div>
 
-    <script src="app.js?v=31"></script>
+    <script src="app.js?v=32"></script>
     <script>
         const connectBtn = document.getElementById('connectBtn');
         const themeToggle = document.getElementById('themeToggle');
@@ -89,13 +116,20 @@
         const senseSlider = document.getElementById('senseSlider');
         const senseVal = document.getElementById('senseVal');
 
-        let currentMods = 0;
-        let bleQueue = [];
-        let bleProcessing = false;
+        // Check for HTTPS and iOS
+        if (!window.isSecureContext && window.location.hostname !== 'localhost') {
+            document.getElementById('httpsModal').style.display = 'block';
+        }
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+        if (isIOS && !isStandalone && !navigator.bluetooth) {
+            document.getElementById('iosModal').style.display = 'block';
+        }
 
-        // --- Persistence ---
+        let currentMods = 0, bleQueue = [], bleProcessing = false;
+
         let sensitivity = parseFloat(localStorage.getItem('fkb_sense') || "1.5");
-        osSelect.value = localStorage.getItem('fkb_os') || "pc";
+        osSelect.value = localStorage.getItem('fkb_os') || (isIOS ? "ios" : "pc");
         senseSlider.value = sensitivity;
         senseVal.textContent = sensitivity.toFixed(1) + "x";
 
@@ -115,14 +149,13 @@
         });
 
         const sleep = ms => new Promise(r => setTimeout(r, ms));
-
         const queueSend = async (actionFn) => {
             bleQueue.push(actionFn);
             if (bleProcessing) return;
             bleProcessing = true;
             while (bleQueue.length > 0) {
                 const fn = bleQueue.shift();
-                try { await fn(); await sleep(15); } catch (e) { console.error(e); }
+                try { await fn(); await sleep(12); } catch (e) { console.error(e); }
             }
             bleProcessing = false;
         };
@@ -136,16 +169,13 @@
         });
 
         kbIcon.addEventListener('click', () => hiddenInput.focus());
-
         hiddenInput.addEventListener('input', (e) => {
             const char = e.data;
             if (char && char.length === 1) queueSend(() => sendKeyToFlipper(char));
             hiddenInput.value = '';
         });
 
-        // Trackpad Logic
         let pendingDX = 0, pendingDY = 0, lastX = 0, lastY = 0, isMoving = false, startTime = 0;
-
         const handleStart = (x, y) => { isMoving = true; lastX = x; lastY = y; startTime = Date.now(); };
         const handleMove = (x, y, mx, my) => {
             if (document.pointerLockElement === trackpad) { pendingDX += mx * sensitivity; pendingDY += my * sensitivity; }
@@ -155,7 +185,7 @@
         trackpad.addEventListener('touchstart', (e) => { handleStart(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault(); });
         trackpad.addEventListener('touchmove', (e) => { handleMove(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault(); });
         trackpad.addEventListener('touchend', () => {
-            if (isMoving && (Date.now() - startTime < 200) && Math.abs(pendingDX) < 5) {
+            if (isMoving && (Date.now() - startTime < 150) && Math.abs(pendingDX) < 5) {
                 queueSend(async () => { await sendMouseButtonToFlipper(0x01); await sleep(30); await sendMouseButtonToFlipper(0x00); });
             }
             isMoving = false;
@@ -180,23 +210,23 @@
                 queueSend(() => sendMousePosToFlipper(Math.round(pendingDX), Math.round(pendingDY)));
                 pendingDX = 0; pendingDY = 0;
             }
-        }, 30);
+        }, 25);
 
-        const btn = (id, m) => {
+        const btnSetup = (id, m) => {
             const el = document.getElementById(id);
             const d = () => queueSend(() => sendMouseButtonToFlipper(m));
             const u = () => queueSend(() => sendMouseButtonToFlipper(0x00));
             el.addEventListener('mousedown', d); el.addEventListener('mouseup', u);
             el.addEventListener('touchstart', (e) => { d(); e.preventDefault(); }); el.addEventListener('touchend', u);
         };
-        btn('leftClickBtn', 0x01); btn('rightClickBtn', 0x02);
+        btnSetup('leftClickBtn', 0x01); btnSetup('rightClickBtn', 0x02);
 
         window.addEventListener('keydown', (e) => {
-            const isIOS = osSelect.value === 'ios';
+            const isIOSMode = osSelect.value === 'ios';
             let newMods = currentMods;
             if (e.key === 'Shift') newMods |= 0x02;
             if (e.key === 'Alt') newMods |= 0x04;
-            if (e.key === 'Control') newMods |= isIOS ? 0x08 : 0x01;
+            if (e.key === 'Control') newMods |= isIOSMode ? 0x08 : 0x01;
             if (e.key === 'Meta') newMods |= 0x08;
 
             if (newMods !== currentMods) {
@@ -214,6 +244,10 @@
                 }
             }
         });
+        
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW error:', err)));
+        }
     </script>
 </body>
 </html>
