@@ -1,0 +1,26 @@
+# Conductor (Internal Framework)
+conductor/
+
+# Build Artifacts
+dist/
+build/
+*.fap
+*.elf
+*.bin
+*.map
+*.o
+*.d
+.ufbt/
+
+# Development
+.vscode/
+.tests/
+.env
+*.swp
+*.log
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
