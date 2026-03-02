@@ -17,4 +17,4 @@ This file tracks all major tracks for the project. Each track has its own detail
   *Link: [./archive/qol_improvements_20260301/](./archive/qol_improvements_20260301/)*
 
 - [x] **Track: Quality of Life Improvements v2** (completed)
-  *Link: [./tracks/qol_v2_20260301/](./tracks/qol_v2_20260301/)*
+  *Link: [./archive/qol_v2_20260301/](./archive/qol_v2_20260301/)*
