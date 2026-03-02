@@ -12,6 +12,8 @@ extern "C" {
 typedef struct {
     char layout_path[256];
     bool vibro_enabled;
+    uint8_t bt_name_index;
+    bool accel_enabled;
 } FlipperKbConfig;
 
 // Loads the configuration from the SD card.

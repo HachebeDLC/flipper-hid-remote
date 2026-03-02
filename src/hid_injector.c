@@ -3,6 +3,7 @@
 #include <furi_hal_usb_hid.h>
 #include <furi_hal_vibro.h>
 #include <storage/storage.h>
+#include "gui_manager.h"
 
 static uint16_t current_modifiers = 0;
 static uint16_t active_layout[128];
@@ -81,7 +82,24 @@ int FlipperHidSetModifiers(uint8_t modifiers) {
 }
 
 int FlipperHidInjectMouse(int dx, int dy) {
-  // Relative movement at full speed
+  GuiManager* gm = (GuiManager*)app_gui_manager;
+  
+  if (gm && gm->config.accel_enabled) {
+      // Simple acceleration curve: out = in * (1 + |in|/10)
+      // This makes fast movements much faster while keeping slow movements precise
+      int abs_dx = (dx < 0) ? -dx : dx;
+      int abs_dy = (dy < 0) ? -dy : dy;
+      
+      dx = dx + (dx * abs_dx) / 8;
+      dy = dy + (dy * abs_dy) / 8;
+      
+      // Clamp to signed 8-bit range
+      if (dx > 127) dx = 127;
+      if (dx < -127) dx = -127;
+      if (dy > 127) dy = 127;
+      if (dy < -127) dy = -127;
+  }
+
   if (furi_hal_hid_mouse_move(dx, dy)) return 0;
   return -1;
 }

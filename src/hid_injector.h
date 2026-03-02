@@ -7,6 +7,8 @@
 extern "C" {
 #endif
 
+extern void* app_gui_manager;
+
 // Injects a single keystroke (press + release). Returns 0 on success.
 int FlipperHidInjectKey(char key);
 

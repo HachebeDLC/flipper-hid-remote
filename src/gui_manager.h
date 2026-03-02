@@ -12,15 +12,23 @@ typedef struct {
   ViewDispatcher* view_dispatcher;
   Submenu* submenu;
   VariableItemList* variable_item_list;
-  VariableItemList* settings_list;
+  
+  // Settings Category Lists
+  Submenu* settings_submenu;
+  VariableItemList* settings_conn;
+  VariableItemList* settings_input;
+  VariableItemList* settings_feedback;
+  
   DialogsApp* dialogs;
   
   FlipperKbConfig config;
   
   VariableItem* ble_status_item;
   VariableItem* last_byte_item;
+  
   VariableItem* layout_item;
   VariableItem* vibro_item;
+  VariableItem* accel_item;
   
   FuriMessageQueue* command_queue;
   

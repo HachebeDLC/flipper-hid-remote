@@ -4,54 +4,55 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Flipper HID Remote</title>
-    <style>
-        body { font-family: sans-serif; text-align: center; padding: 10px; background: #111; color: #eee; touch-action: none; overflow: hidden; }
-        button { padding: 12px 20px; font-size: 16px; margin: 5px; cursor: pointer; border-radius: 8px; border: none; background: #ff8c00; color: white; }
-        button:disabled { background: #555; }
-        #status { margin: 10px; font-weight: bold; }
+    <style id="themeStyles">
+        :root { --bg: #111; --text: #eee; --panel: #1a1a1a; --border: #444; --accent: #ff8c00; --btn-active: #00bcd4; }
+        .light-mode { --bg: #f0f0f0; --text: #222; --panel: #fff; --border: #ccc; --accent: #e67e00; --btn-active: #0097a7; }
         
-        .panel { border: 1px solid #444; padding: 15px; border-radius: 12px; margin-bottom: 20px; background: #1a1a1a; }
+        body { font-family: sans-serif; text-align: center; padding: 10px; background: var(--bg); color: var(--text); touch-action: none; overflow: hidden; transition: background 0.3s, color 0.3s; }
+        button { padding: 12px 20px; font-size: 16px; margin: 5px; cursor: pointer; border-radius: 8px; border: none; background: var(--accent); color: white; }
+        button:disabled { background: #555; }
+        
+        .panel { border: 1px solid var(--border); padding: 15px; border-radius: 12px; margin-bottom: 20px; background: var(--panel); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         
         .mod-panel { display: flex; justify-content: center; flex-wrap: wrap; }
         .mod-btn { background: #333; color: #aaa; width: 50px; height: 50px; line-height: 50px; border-radius: 50%; margin: 5px; cursor: pointer; border: 2px solid #555; font-weight: bold; font-size: 12px; }
-        .mod-btn.active { background: #00bcd4; color: white; border-color: #eee; }
+        .mod-btn.active { background: var(--btn-active); color: white; border-color: #eee; }
         
-        #trackpad { width: 100%; height: 300px; background: #222; border: 2px solid #444; border-radius: 15px; margin: 20px 0; touch-action: none; position: relative; overflow: hidden; cursor: crosshair; }
-        #trackpad::after { content: 'TRACKPAD'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #444; font-weight: bold; pointer-events: none; font-size: 14px; }
+        #trackpad { width: 100%; height: 280px; background: var(--bg); border: 2px solid var(--border); border-radius: 15px; margin: 15px 0; touch-action: none; position: relative; overflow: hidden; cursor: crosshair; }
+        #trackpad::after { content: 'TRACKPAD'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--border); font-weight: bold; pointer-events: none; }
         
-        .mouse-btns { display: flex; gap: 10px; margin-bottom: 20px; }
-        .mouse-btn { flex: 1; height: 70px; background: #333; border: 2px solid #444; border-radius: 10px; line-height: 70px; font-weight: bold; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
-        .mouse-btn:active { background: #00bcd4; color: #fff; }
+        .mouse-btns { display: flex; gap: 10px; margin-bottom: 15px; }
+        .mouse-btn { flex: 1; height: 60px; background: var(--panel); border: 2px solid var(--border); border-radius: 10px; line-height: 60px; font-weight: bold; cursor: pointer; user-select: none; }
+        .mouse-btn:active { background: var(--btn-active); color: #fff; }
 
-        .shortcut-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 8px; }
-        .shortcut-btn { background: #222; border: 1px solid #444; padding: 8px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        #themeToggle { font-size: 20px; cursor: pointer; background: none; border: 1px solid var(--border); padding: 5px 10px; }
 
+        .slider-box { margin: 10px 0; font-size: 14px; }
         #hiddenInput { opacity: 0; position: absolute; z-index: -1; }
         .icon { font-size: 30px; cursor: pointer; margin: 10px; display: inline-block; }
-        .os-toggle { margin: 10px; padding: 5px; border: 1px solid #444; border-radius: 8px; display: inline-block; font-size: 14px; }
-        
-        .slider-box { margin: 10px; padding: 10px; border: 1px solid #444; border-radius: 8px; display: inline-block; font-size: 14px; }
-        input[type=range] { vertical-align: middle; }
     </style>
 </head>
 <body>
-    <h1>Flipper HID Remote</h1>
-    
-    <div id="status">Disconnected</div>
-    <button id="connectBtn">Connect to Flipper</button>
-
-    <div class="os-toggle">
-        Target OS: 
-        <select id="osSelect" style="background: #222; color: #fff; padding: 5px; border: none;">
-            <option value="pc">Windows/Linux (Ctrl)</option>
-            <option value="ios">iPhone/Mac (Cmd)</option>
-        </select>
+    <div class="top-bar">
+        <button id="themeToggle">🌙</button>
+        <div id="status">Disconnected</div>
+        <button id="connectBtn">Connect</button>
     </div>
 
-    <div class="slider-box">
-        Sensitivity: 
-        <input type="range" id="senseSlider" min="0.5" max="4.0" step="0.1" value="1.5">
-        <span id="senseVal">1.5x</span>
+    <div class="panel">
+        <div style="display: flex; justify-content: space-around; font-size: 13px;">
+            <div>
+                OS: <select id="osSelect" style="background: var(--bg); color: var(--text); border: 1px solid var(--border);">
+                    <option value="pc">PC</option>
+                    <option value="ios">iOS</option>
+                </select>
+            </div>
+            <div class="slider-box">
+                Sense: <input type="range" id="senseSlider" min="0.5" max="4.0" step="0.1" value="1.5" style="width: 80px;">
+                <span id="senseVal">1.5x</span>
+            </div>
+        </div>
     </div>
 
     <div id="trackpad"></div>
@@ -69,24 +70,17 @@
             <div class="mod-btn" id="cmdBtn" data-bit="0x08">Cmd</div>
         </div>
     </div>
-
-    <div class="panel">
-        <div class="shortcut-grid">
-            <div class="shortcut-btn" id="copyBtn">Copy (C)</div>
-            <div class="shortcut-btn" id="pasteBtn">Paste (V)</div>
-            <div class="shortcut-btn" id="undoBtn">Undo (Z)</div>
-            <div class="shortcut-btn" id="saveBtn">Save (S)</div>
-        </div>
-    </div>
     
-    <div>
+    <div style="display: flex; justify-content: center; align-items: center;">
         <div id="kbIcon" class="icon" title="Open Keyboard">⌨️</div>
         <input type="text" id="hiddenInput" autocapitalize="none" autocomplete="off" spellcheck="false">
+        <p style="font-size: 12px; margin-left: 10px;">Tap icon to type</p>
     </div>
 
-    <script src="app.js?v=30"></script>
+    <script src="app.js?v=31"></script>
     <script>
         const connectBtn = document.getElementById('connectBtn');
+        const themeToggle = document.getElementById('themeToggle');
         const statusDiv = document.getElementById('status');
         const kbIcon = document.getElementById('kbIcon');
         const hiddenInput = document.getElementById('hiddenInput');
@@ -98,13 +92,21 @@
         let currentMods = 0;
         let bleQueue = [];
         let bleProcessing = false;
-        let sensitivity = parseFloat(localStorage.getItem('fkb_sense') || "1.5");
 
-        // Load Persisted Web Settings
+        // --- Persistence ---
+        let sensitivity = parseFloat(localStorage.getItem('fkb_sense') || "1.5");
         osSelect.value = localStorage.getItem('fkb_os') || "pc";
         senseSlider.value = sensitivity;
         senseVal.textContent = sensitivity.toFixed(1) + "x";
 
+        const setDarkMode = (isDark) => {
+            document.body.classList.toggle('light-mode', !isDark);
+            themeToggle.textContent = isDark ? '🌙' : '☀️';
+            localStorage.setItem('fkb_theme', isDark ? 'dark' : 'light');
+        };
+        setDarkMode(localStorage.getItem('fkb_theme') !== 'light');
+
+        themeToggle.addEventListener('click', () => setDarkMode(document.body.classList.contains('light-mode')));
         osSelect.addEventListener('change', () => localStorage.setItem('fkb_os', osSelect.value));
         senseSlider.addEventListener('input', () => {
             sensitivity = parseFloat(senseSlider.value);
@@ -120,7 +122,7 @@
             bleProcessing = true;
             while (bleQueue.length > 0) {
                 const fn = bleQueue.shift();
-                try { await fn(); await sleep(10); } catch (e) { console.error(e); }
+                try { await fn(); await sleep(15); } catch (e) { console.error(e); }
             }
             bleProcessing = false;
         };
@@ -128,12 +130,12 @@
         connectBtn.addEventListener('click', async () => {
             statusDiv.textContent = 'Connecting...';
             if (await connectToFlipper()) {
-                statusDiv.textContent = 'Connected to Flipper';
+                statusDiv.textContent = 'Connected';
                 connectBtn.disabled = true;
-            } else { statusDiv.textContent = 'Connection failed'; }
+            } else { statusDiv.textContent = 'Failed'; }
         });
 
-        kbIcon.addEventListener('click', () => { hiddenInput.focus(); });
+        kbIcon.addEventListener('click', () => hiddenInput.focus());
 
         hiddenInput.addEventListener('input', (e) => {
             const char = e.data;
@@ -141,67 +143,53 @@
             hiddenInput.value = '';
         });
 
-        // TRACKPAD LOGIC
-        let pendingDX = 0;
-        let pendingDY = 0;
-        let lastMoveX = 0;
-        let lastMoveY = 0;
-        let isTouching = false;
-        let startTime = 0;
+        // Trackpad Logic
+        let pendingDX = 0, pendingDY = 0, lastX = 0, lastY = 0, isMoving = false, startTime = 0;
 
-        trackpad.addEventListener('click', () => {
-            if (osSelect.value === 'pc') trackpad.requestPointerLock();
-            else {
-                queueSend(async () => { await sendMouseButtonToFlipper(0x01); await sleep(30); await sendMouseButtonToFlipper(0x00); });
-            }
-        });
-
-        const handleStart = (x, y) => { isTouching = true; lastMoveX = x; lastMoveY = y; startTime = Date.now(); };
-        const handleMove = (x, y, movementX, movementY) => {
-            if (document.pointerLockElement === trackpad) {
-                pendingDX += movementX * sensitivity;
-                pendingDY += movementY * sensitivity;
-            } else if (isTouching) {
-                pendingDX += (x - lastMoveX) * sensitivity;
-                pendingDY += (y - lastMoveY) * sensitivity;
-                lastMoveX = x; lastMoveY = y;
-            }
+        const handleStart = (x, y) => { isMoving = true; lastX = x; lastY = y; startTime = Date.now(); };
+        const handleMove = (x, y, mx, my) => {
+            if (document.pointerLockElement === trackpad) { pendingDX += mx * sensitivity; pendingDY += my * sensitivity; }
+            else if (isMoving) { pendingDX += (x - lastX) * sensitivity; pendingDY += (y - lastY) * sensitivity; lastX = x; lastY = y; }
         };
 
         trackpad.addEventListener('touchstart', (e) => { handleStart(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault(); });
         trackpad.addEventListener('touchmove', (e) => { handleMove(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault(); });
-        trackpad.addEventListener('touchend', () => { isTouching = false; });
+        trackpad.addEventListener('touchend', () => {
+            if (isMoving && (Date.now() - startTime < 200) && Math.abs(pendingDX) < 5) {
+                queueSend(async () => { await sendMouseButtonToFlipper(0x01); await sleep(30); await sendMouseButtonToFlipper(0x00); });
+            }
+            isMoving = false;
+        });
 
+        trackpad.addEventListener('mousedown', (e) => {
+            if (osSelect.value === 'pc') trackpad.requestPointerLock();
+            else handleStart(e.clientX, e.clientY);
+        });
         window.addEventListener('mousemove', (e) => handleMove(e.clientX, e.clientY, e.movementX, e.movementY));
+        window.addEventListener('mouseup', () => { isMoving = false; });
 
         window.addEventListener('wheel', (e) => {
-            if (document.pointerLockElement === trackpad || isTouching) {
+            if (document.pointerLockElement === trackpad || isMoving) {
                 e.preventDefault();
-                const delta = e.deltaY > 0 ? -1 : 1;
-                queueSend(() => sendMouseScrollToFlipper(delta));
+                queueSend(() => sendMouseScrollToFlipper(e.deltaY > 0 ? -1 : 1));
             }
         }, { passive: false });
 
         setInterval(() => {
-            if (Math.abs(pendingDX) > 0.5 || Math.abs(pendingDY) > 0.5) {
-                const dx = Math.round(pendingDX);
-                const dy = Math.round(pendingDY);
-                queueSend(() => sendMousePosToFlipper(dx, dy));
+            if (Math.abs(pendingDX) > 0.1 || Math.abs(pendingDY) > 0.1) {
+                queueSend(() => sendMousePosToFlipper(Math.round(pendingDX), Math.round(pendingDY)));
                 pendingDX = 0; pendingDY = 0;
             }
-        }, 20);
+        }, 30);
 
-        const btnHandler = (id, mask) => {
-            const btn = document.getElementById(id);
-            const down = () => queueSend(() => sendMouseButtonToFlipper(mask));
-            const up = () => queueSend(() => sendMouseButtonToFlipper(0x00));
-            btn.addEventListener('mousedown', down);
-            btn.addEventListener('mouseup', up);
-            btn.addEventListener('touchstart', (e) => { down(); e.preventDefault(); });
-            btn.addEventListener('touchend', up);
+        const btn = (id, m) => {
+            const el = document.getElementById(id);
+            const d = () => queueSend(() => sendMouseButtonToFlipper(m));
+            const u = () => queueSend(() => sendMouseButtonToFlipper(0x00));
+            el.addEventListener('mousedown', d); el.addEventListener('mouseup', u);
+            el.addEventListener('touchstart', (e) => { d(); e.preventDefault(); }); el.addEventListener('touchend', u);
         };
-        btnHandler('leftClickBtn', 0x01);
-        btnHandler('rightClickBtn', 0x02);
+        btn('leftClickBtn', 0x01); btn('rightClickBtn', 0x02);
 
         window.addEventListener('keydown', (e) => {
             const isIOS = osSelect.value === 'ios';
@@ -214,39 +202,16 @@
             if (newMods !== currentMods) {
                 currentMods = newMods;
                 queueSend(() => sendModifiersToFlipper(currentMods));
-                document.getElementById('ctrlBtn').classList.toggle('active', !!(currentMods & 0x01));
-                document.getElementById('shiftBtn').classList.toggle('active', !!(currentMods & 0x02));
-                document.getElementById('altBtn').classList.toggle('active', !!(currentMods & 0x04));
-                document.getElementById('cmdBtn').classList.toggle('active', !!(currentMods & 0x08));
+                ['ctrlBtn','shiftBtn','altBtn','cmdBtn'].forEach((id,i) => document.getElementById(id).classList.toggle('active', !!(currentMods & (1<<i))));
             }
 
             if (['Backspace', 'Enter', 'Delete', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
                 e.preventDefault();
                 if (e.key === 'Enter') queueSend(() => sendKeyToFlipper('\n'));
-                else if (e.key === 'Backspace') queueSend(async () => { await sendKeyDownToFlipper(0x2A); await sleep(30); await sendKeyUpToFlipper(0x2A); });
-                else if (e.key === 'Delete') queueSend(async () => { await sendKeyDownToFlipper(0x4C); await sleep(30); await sendKeyUpToFlipper(0x4C); });
-                else if (e.key === 'ArrowRight') queueSend(async () => { await sendKeyDownToFlipper(0x4F); await sleep(30); await sendKeyUpToFlipper(0x4F); });
-                else if (e.key === 'ArrowLeft') queueSend(async () => { await sendKeyDownToFlipper(0x50); await sleep(30); await sendKeyUpToFlipper(0x50); });
-                else if (e.key === 'ArrowDown') queueSend(async () => { await sendKeyDownToFlipper(0x51); await sleep(30); await sendKeyUpToFlipper(0x51); });
-                else if (e.key === 'ArrowUp') queueSend(async () => { await sendKeyDownToFlipper(0x52); await sleep(30); await sendKeyUpToFlipper(0x52); });
-            }
-        });
-
-        window.addEventListener('keyup', (e) => {
-            const isIOS = osSelect.value === 'ios';
-            let newMods = currentMods;
-            if (e.key === 'Shift') newMods &= ~0x02;
-            if (e.key === 'Alt') newMods &= ~0x04;
-            if (e.key === 'Control') newMods &= ~(isIOS ? 0x08 : 0x01);
-            if (e.key === 'Meta') newMods &= ~0x08;
-
-            if (newMods !== currentMods) {
-                currentMods = newMods;
-                queueSend(() => sendModifiersToFlipper(currentMods));
-                document.getElementById('ctrlBtn').classList.toggle('active', !!(currentMods & 0x01));
-                document.getElementById('shiftBtn').classList.toggle('active', !!(currentMods & 0x02));
-                document.getElementById('altBtn').classList.toggle('active', !!(currentMods & 0x04));
-                document.getElementById('cmdBtn').classList.toggle('active', !!(currentMods & 0x08));
+                else {
+                    const map = {Backspace:0x2A, Delete:0x4C, ArrowRight:0x4F, ArrowLeft:0x50, ArrowDown:0x51, ArrowUp:0x52};
+                    queueSend(async () => { await sendKeyDownToFlipper(map[e.key]); await sleep(30); await sendKeyUpToFlipper(map[e.key]); });
+                }
             }
         });
     </script>

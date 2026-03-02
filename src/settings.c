@@ -8,6 +8,8 @@ void FlipperKbConfigLoad(FlipperKbConfig* config) {
     // Default values
     strncpy(config->layout_path, "default", sizeof(config->layout_path));
     config->vibro_enabled = true;
+    config->bt_name_index = 0; // Default: Flipper HID
+    config->accel_enabled = true;
 
     Storage* storage = furi_record_open(RECORD_STORAGE);
     File* file = storage_file_alloc(storage);

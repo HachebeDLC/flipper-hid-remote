@@ -11,7 +11,7 @@
 
 static FuriHalBleProfileBase* ble_profile = NULL;
 static Bt* bt_system = NULL;
-static void* app_gui_manager = NULL;
+void* app_gui_manager = NULL;
 static FuriTimer* timer = NULL;
 static Rpc* rpc_system = NULL;
 static RpcSession* rpc_session_blocker = NULL;
