@@ -1,6 +1,6 @@
 // Flipper Zero Momentum/Xtreme Serial Service UUIDs
 const FLIPPER_SERIAL_SERVICE_UUID = '8fe5b3d5-2e7f-4a98-2a48-7acc60fe0000';
-const FLIPPER_SERIAL_RX_UUID = '19ed82ae-ed21-4c9d-4145-228e62fe0000'; // Explicit RX
+const FLIPPER_SERIAL_RX_UUID = '19ed82ae-ed21-4c9d-4145-228e62fe0000';
 
 let flipperRxCharacteristic = null;
 let reconnectAttempts = 0;
@@ -17,16 +17,16 @@ async function connectToFlipper() {
         console.log(`Found: ${device.name}. Connecting...`);
         const server = await device.gatt.connect();
 
-        console.log('Waiting for connection stability...');
-        await new Promise(r => setTimeout(r, 1200));
+        // INCREASED DELAY: Give Momentum more time to finish identity setup
+        console.log('Waiting for identity stability...');
+        await new Promise(r => setTimeout(r, 1500));
         
-        if (!device.gatt.connected) throw new Error("GATT disconnected during handshake.");
+        if (!device.gatt.connected) throw new Error("GATT disconnected during identity swap.");
 
         console.log('Fetching Primary Service...');
         const service = await server.getPrimaryService(FLIPPER_SERIAL_SERVICE_UUID);
 
         console.log('Getting RX Characteristic...');
-        // We target the specific working RX UUID
         flipperRxCharacteristic = await service.getCharacteristic(FLIPPER_SERIAL_RX_UUID);
         
         console.log(`Connected Successfully!`);
@@ -35,10 +35,10 @@ async function connectToFlipper() {
     } catch (error) {
         console.error('Bluetooth error:', error);
         
-        if ((error.name === 'NetworkError' || error.message.includes('disconnected')) && reconnectAttempts < 2) {
+        if ((error.name === 'NetworkError' || error.message.includes('disconnected')) && reconnectAttempts < 3) {
             reconnectAttempts++;
-            console.warn(`Retrying connection (${reconnectAttempts})...`);
-            await new Promise(r => setTimeout(r, 800));
+            console.warn(`Self-healing connection (Attempt ${reconnectAttempts})...`);
+            await new Promise(r => setTimeout(r, 1000));
             return connectToFlipper();
         }
 
@@ -51,11 +51,10 @@ async function connectToFlipper() {
 async function sendData(data) {
     if (!flipperRxCharacteristic) return;
     try {
-        // NUS RX expects Write Without Response
         await flipperRxCharacteristic.writeValueWithoutResponse(data);
     } catch (e) {
-        console.warn("Write error, retrying with response...", e);
-        try { await flipperRxCharacteristic.writeValue(data); } catch(e2) { console.error("Critical write fail", e2); }
+        console.warn("Write error, retrying...", e);
+        try { await flipperRxCharacteristic.writeValue(data); } catch(e2) { console.error("Write fail", e2); }
     }
 }
 
