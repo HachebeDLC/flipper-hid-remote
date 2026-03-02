@@ -5,5 +5,9 @@ App(
     entry_point="flipper_kb_app",
     stack_size=4 * 1024,
     fap_category="USB",
-    fap_description="USB Mouse and Keyboard controlled via BLE",
+    fap_version="1.0",
+    fap_icon="icon_10.png",
+    fap_description="Professional USB HID Bridge via Web Bluetooth.",
+    fap_author="HachebeDLC",
+    fap_weburl="https://flipper-hid-remote.netlify.app/",
 )
