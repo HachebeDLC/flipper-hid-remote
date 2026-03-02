@@ -12,6 +12,8 @@
 #include <rpc/rpc.h>
 #include <storage/storage.h>
 
+#define TAG "BleListener"
+
 static FuriHalBleProfileBase* ble_profile = NULL;
 static Bt* bt_system = NULL;
 void* app_gui_manager = NULL;
@@ -22,8 +24,6 @@ static BleServiceBattery* battery_svc = NULL;
 
 #include <furi_hal_vibro.h>
 #include "gui_manager.h"
-
-// --- MOMENTUM PRO LOGIC ---
 
 static uint16_t BleSerialCallback(SerialServiceEvent event, void* context) {
   if (event.event == SerialServiceEventTypeDataReceived) {
@@ -43,14 +43,17 @@ static void TimerCallback(void* context) {
 }
 
 static FuriHalBleProfileBase* ble_profile_serial_momentum_start(FuriHalBleProfileParams profile_params) {
+    FURI_LOG_D(TAG, "Starting serial profile...");
     return ble_profile_serial->start(profile_params);
 }
 
 static void ble_profile_serial_momentum_stop(FuriHalBleProfileBase* profile) {
+    FURI_LOG_D(TAG, "Stopping serial profile...");
     ble_profile_serial->stop(profile);
 }
 
 static void ble_profile_serial_momentum_get_config(GapConfig* config, FuriHalBleProfileParams profile_params) {
+    FURI_LOG_D(TAG, "Generating GAP config...");
     ble_profile_serial->get_gap_config(config, profile_params);
     
     char custom_name[FURI_HAL_VERSION_DEVICE_NAME_LENGTH];
@@ -65,6 +68,7 @@ static void ble_profile_serial_momentum_get_config(GapConfig* config, FuriHalBle
     
     config->bonding_mode = true;
     config->pairing_method = GapPairingPinCodeShow;
+    FURI_LOG_D(TAG, "GAP Config complete. Name: %s", custom_name);
 }
 
 static const FuriHalBleProfileTemplate profile_momentum_callbacks = {
@@ -76,23 +80,29 @@ static const FuriHalBleProfileTemplate profile_momentum_callbacks = {
 static const FuriHalBleProfileTemplate* ble_profile_momentum = &profile_momentum_callbacks;
 
 int FlipperBleListenerStart(void* gui_manager) {
+  FURI_LOG_I(TAG, "Starting BLE Listener...");
   if (ble_profile != NULL) return 0;
   app_gui_manager = gui_manager;
   
+  FURI_LOG_D(TAG, "Opening RPC...");
   rpc_system = furi_record_open(RECORD_RPC);
   rpc_session_blocker = rpc_session_open(rpc_system, RpcOwnerBle);
   
+  FURI_LOG_D(TAG, "Disconnecting BT...");
   bt_system = furi_record_open(RECORD_BT);
   bt_disconnect(bt_system);
   furi_delay_ms(500);
 
+  FURI_LOG_D(TAG, "Setting key storage path...");
   Storage* storage = furi_record_open(RECORD_STORAGE);
   storage_common_mkdir(storage, EXT_PATH("apps_data/flipper_kb"));
   furi_record_close(RECORD_STORAGE);
   bt_keys_storage_set_storage_path(bt_system, EXT_PATH("apps_data/flipper_kb/.bt_hid.keys"));
 
+  FURI_LOG_D(TAG, "Starting custom profile...");
   ble_profile = bt_profile_start(bt_system, ble_profile_momentum, NULL);
   if (ble_profile == NULL) {
+      FURI_LOG_E(TAG, "Failed to start BLE profile!");
       if (rpc_session_blocker) rpc_session_close(rpc_session_blocker);
       furi_record_close(RECORD_RPC);
       furi_record_close(RECORD_BT);
@@ -101,24 +111,30 @@ int FlipperBleListenerStart(void* gui_manager) {
   
   furi_delay_ms(1000);
   
+  FURI_LOG_D(TAG, "Starting Battery Service...");
   battery_svc = ble_svc_battery_start(true);
   uint8_t level = furi_hal_power_get_pct();
   ble_svc_battery_update_level(battery_svc, level);
   
+  FURI_LOG_D(TAG, "Setting serial callbacks...");
   ble_profile_serial_set_event_callback(ble_profile, 512, BleSerialCallback, NULL);
   ble_profile_serial_notify_buffer_is_empty(ble_profile);
   ble_profile_serial_set_rpc_active(ble_profile, false);
   
+  FURI_LOG_D(TAG, "Starting advertising...");
   furi_hal_bt_start_advertising();
   
+  FURI_LOG_D(TAG, "Starting timer...");
   timer = furi_timer_alloc(TimerCallback, FuriTimerTypePeriodic, NULL);
   furi_timer_start(timer, furi_ms_to_ticks(500));
   
+  FURI_LOG_I(TAG, "BLE Ready.");
   furi_hal_vibro_on(true); furi_delay_ms(50); furi_hal_vibro_on(false);
   return 0;
 }
 
 int FlipperBleListenerStop(void) {
+  FURI_LOG_I(TAG, "Stopping BLE Listener...");
   if (timer) { furi_timer_stop(timer); furi_timer_free(timer); timer = NULL; }
   if (battery_svc) {
       ble_svc_battery_stop(battery_svc);
@@ -126,6 +142,7 @@ int FlipperBleListenerStop(void) {
   }
   if (ble_profile == NULL) return 0;
   
+  FURI_LOG_D(TAG, "Restoring BT state...");
   bt_keys_storage_set_default_path(bt_system);
   bt_profile_restore_default(bt_system);
   
@@ -133,6 +150,7 @@ int FlipperBleListenerStop(void) {
   furi_record_close(RECORD_RPC);
   furi_record_close(RECORD_BT);
   ble_profile = NULL;
+  FURI_LOG_I(TAG, "BLE Stopped.");
   return 0;
 }
 
