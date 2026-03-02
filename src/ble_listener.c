@@ -6,6 +6,7 @@
 #include <services/battery_service.h>
 #include <furi_hal_bt.h>
 #include <furi_hal_power.h>
+#include <furi_hal_version.h>
 #include <furi.h>
 #include <rpc/rpc.h>
 
@@ -19,6 +20,48 @@ static BleServiceBattery* battery_svc = NULL;
 
 #include <furi_hal_vibro.h>
 #include "gui_manager.h"
+
+// --- MOMENTUM EXPLICIT SERVICE HACK ---
+
+static FuriHalBleProfileBase* ble_profile_serial_momentum_start(FuriHalBleProfileParams profile_params) {
+    return ble_profile_serial->start(profile_params);
+}
+
+static void ble_profile_serial_momentum_stop(FuriHalBleProfileBase* profile) {
+    ble_profile_serial->stop(profile);
+}
+
+static void ble_profile_serial_momentum_get_config(GapConfig* config, FuriHalBleProfileParams profile_params) {
+    // 1. Get standard NUS (Nordic UART Service) config
+    ble_profile_serial->get_gap_config(config, profile_params);
+    
+    // 2. Override Name with HID_ prefix
+    char custom_name[FURI_HAL_VERSION_DEVICE_NAME_LENGTH];
+    snprintf(custom_name, sizeof(custom_name), "HID_%s", furi_hal_version_get_name_ptr());
+    strlcpy(config->adv_name + 1, custom_name, sizeof(config->adv_name) - 1);
+
+    // 3. FORCE EXPLICIT 128-BIT UUID BROADCAST
+    // NUS UUID: 6e400001-b5a3-f393-e0a9-e50e24dcca9e
+    config->adv_service.UUID_Type = 0x02; // UUID_TYPE_128
+    static const uint8_t nus_uuid[16] = {
+        0x9e, 0xca, 0xdc, 0x24, 0x0e, 0xe5, 0xa9, 0xe0,
+        0x93, 0xf3, 0xa3, 0xb5, 0x01, 0x00, 0x40, 0x6e
+    };
+    memcpy(config->adv_service.Service_UUID_128, nus_uuid, 16);
+    
+    // 4. ENSURE STABLE PAIRING
+    config->bonding_mode = true;
+    config->pairing_method = GapPairingPinCodeShow;
+}
+
+static const FuriHalBleProfileTemplate profile_momentum_callbacks = {
+    .start = ble_profile_serial_momentum_start,
+    .stop = ble_profile_serial_momentum_stop,
+    .get_gap_config = ble_profile_serial_momentum_get_config,
+};
+
+static const FuriHalBleProfileTemplate* ble_profile_momentum = &profile_momentum_callbacks;
+// ---------------------------------
 
 static uint16_t BleSerialCallback(SerialServiceEvent event, void* context) {
   if (event.event == SerialServiceEventTypeDataReceived) {
@@ -41,7 +84,6 @@ int FlipperBleListenerStart(void* gui_manager) {
   if (ble_profile != NULL) return 0;
   app_gui_manager = gui_manager;
   
-  // LOCK OUT THE SYSTEM RPC (Turn 181 Winning Logic)
   rpc_system = furi_record_open(RECORD_RPC);
   rpc_session_blocker = rpc_session_open(rpc_system, RpcOwnerBle);
   
@@ -49,7 +91,7 @@ int FlipperBleListenerStart(void* gui_manager) {
   bt_disconnect(bt_system);
   furi_delay_ms(500);
 
-  ble_profile = bt_profile_start(bt_system, ble_profile_serial, NULL);
+  ble_profile = bt_profile_start(bt_system, ble_profile_momentum, NULL);
   if (ble_profile == NULL) {
       if (rpc_session_blocker) rpc_session_close(rpc_session_blocker);
       furi_record_close(RECORD_RPC);
@@ -57,43 +99,31 @@ int FlipperBleListenerStart(void* gui_manager) {
       return -1;
   }
   
-  furi_delay_ms(1500);
+  furi_delay_ms(1000);
   
-  // START BATTERY SERVICE
   battery_svc = ble_svc_battery_start(true);
-  
-  // Force an initial update
   uint8_t level = furi_hal_power_get_pct();
   ble_svc_battery_update_level(battery_svc, level);
   
   ble_profile_serial_set_event_callback(ble_profile, 512, BleSerialCallback, NULL);
   ble_profile_serial_notify_buffer_is_empty(ble_profile);
   ble_profile_serial_set_rpc_active(ble_profile, false);
+  
   furi_hal_bt_start_advertising();
   
   timer = furi_timer_alloc(TimerCallback, FuriTimerTypePeriodic, NULL);
   furi_timer_start(timer, furi_ms_to_ticks(500));
   
-  // DOUBLE VIBRATION = BLE READY
-  furi_hal_vibro_on(true);
-  furi_delay_ms(50);
-  furi_hal_vibro_on(false);
-  furi_delay_ms(100);
-  furi_hal_vibro_on(true);
-  furi_delay_ms(50);
-  furi_hal_vibro_on(false);
-  
+  furi_hal_vibro_on(true); furi_delay_ms(50); furi_hal_vibro_on(false);
   return 0;
 }
 
 int FlipperBleListenerStop(void) {
   if (timer) { furi_timer_stop(timer); furi_timer_free(timer); timer = NULL; }
-  
   if (battery_svc) {
       ble_svc_battery_stop(battery_svc);
       battery_svc = NULL;
   }
-
   if (ble_profile == NULL) return 0;
   bt_profile_restore_default(bt_system);
   furi_record_close(RECORD_BT);

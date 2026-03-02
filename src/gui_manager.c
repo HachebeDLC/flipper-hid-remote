@@ -36,6 +36,12 @@ static uint32_t StatusViewBackCallback(void* context) {
   return GuiManagerViewMenu;
 }
 
+// THIS IS THE CRITICAL EXIT PATH
+static uint32_t MenuBackCallback(void* context) {
+  UNUSED(context);
+  return VIEW_NONE; // Tells Flipper to close the app
+}
+
 static void SubmenuCallback(void* context, uint32_t index) {
   GuiManager* manager = context;
   view_dispatcher_send_custom_event(manager->view_dispatcher, index);
@@ -87,8 +93,6 @@ static bool CustomEventCallback(void* context, uint32_t event) {
         if (FlipperHidLayoutLoadFile(furi_string_get_cstr(path))) {
             strncpy(manager->config.layout_path, furi_string_get_cstr(path), sizeof(manager->config.layout_path));
             FlipperKbConfigSave(&manager->config);
-            
-            // Update menu text
             char menu_buf[64];
             snprintf(menu_buf, sizeof(menu_buf), "Layout: %s", get_layout_display_name(manager->config.layout_path));
             submenu_change_item_label(manager->submenu, 2, menu_buf);
@@ -118,7 +122,6 @@ static bool CustomEventCallback(void* context, uint32_t event) {
     }
     snprintf(buf, sizeof(buf), "Pkts: %lu", manager->packets_received);
     variable_item_set_current_value_text(manager->ble_status_item, buf);
-    
     FuriString* header_str = furi_string_alloc();
     furi_string_set(header_str, "HID:");
     if (current_modifiers_mask & 0x01) furi_string_cat(header_str, " ^");
@@ -128,7 +131,6 @@ static bool CustomEventCallback(void* context, uint32_t event) {
     if (current_modifiers_mask == 0) furi_string_cat(header_str, " Ready");
     variable_item_set_current_value_text(manager->ble_status_item, furi_string_get_cstr(header_str));
     furi_string_free(header_str);
-
     if (manager->config.vibro_enabled) {
         furi_hal_vibro_on(true); furi_delay_ms(10); furi_hal_vibro_on(false);
     }
@@ -165,12 +167,12 @@ GuiManager* GuiManagerAlloc(void) {
   submenu_set_header(manager->submenu, "HID Bridge");
   submenu_add_item(manager->submenu, "Start Remote", GuiManagerEventStartRemote, SubmenuCallback, manager);
   submenu_add_item(manager->submenu, "Settings", GuiManagerEventOpenSettings, SubmenuCallback, manager);
-  
   char layout_buf[64];
   snprintf(layout_buf, sizeof(layout_buf), "Layout: %s", get_layout_display_name(manager->config.layout_path));
   submenu_add_item(manager->submenu, layout_buf, GuiManagerEventLoadLayout, SubmenuCallback, manager);
   
-  view_set_previous_callback(submenu_get_view(manager->submenu), ViewBackToMenuCallback);
+  // FIXED: Using MenuBackCallback to return VIEW_NONE
+  view_set_previous_callback(submenu_get_view(manager->submenu), MenuBackCallback);
   view_dispatcher_add_view(manager->view_dispatcher, GuiManagerViewMenu, submenu_get_view(manager->submenu));
   
   // STATUS VIEW
@@ -195,7 +197,6 @@ GuiManager* GuiManagerAlloc(void) {
   variable_item_set_current_value_text(batt, batt_str);
   view_set_previous_callback(variable_item_list_get_view(manager->settings_input), ViewBackToMenuCallback);
   view_dispatcher_add_view(manager->view_dispatcher, GuiManagerViewSettings, variable_item_list_get_view(manager->settings_input));
-
   return manager;
 }
 

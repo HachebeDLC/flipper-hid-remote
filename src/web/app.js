@@ -11,8 +11,7 @@ async function connectToFlipper() {
         
         const device = await navigator.bluetooth.requestDevice({
             filters: [
-                { namePrefix: 'HID_' },   // New Momentum Prefix
-                { namePrefix: 'flip_' }  // Standard Flipper Prefix
+                { namePrefix: 'HID_' }   // Our Momentum custom name
             ],
             optionalServices: [FLIPPER_SERIAL_SERVICE_UUID, 'battery_service']
         });
@@ -20,16 +19,30 @@ async function connectToFlipper() {
         console.log(`Found: ${device.name}. Connecting...`);
         const server = await device.gatt.connect();
 
-        console.log('Fetching Serial Service...');
-        const service = await server.getPrimaryService(FLIPPER_SERIAL_SERVICE_UUID);
+        console.log('Fetching Primary Service...');
+        // We try a small delay to let GATT DB populate
+        await new Promise(r => setTimeout(r, 500));
+        
+        let service;
+        try {
+            service = await server.getPrimaryService(FLIPPER_SERIAL_SERVICE_UUID);
+        } catch (e) {
+            console.warn("NUS Service not found by UUID, trying generic search...");
+            const services = await server.getPrimaryServices();
+            console.log("Available services:", services.map(s => s.uuid));
+            service = services.find(s => s.uuid === FLIPPER_SERIAL_SERVICE_UUID);
+        }
 
-        console.log('Getting Characteristics...');
+        if (!service) throw new Error("Could not locate Serial Service on Flipper.");
+
+        console.log('Getting RX Characteristic...');
         flipperRxCharacteristic = await service.getCharacteristic(FLIPPER_SERIAL_RX_UUID);
         
-        console.log('Connected!');
+        console.log('Connected Successfully!');
         return true;
     } catch (error) {
         console.error('Bluetooth error:', error);
+        alert("Connection Failed: " + error.message);
         return false;
     }
 }
