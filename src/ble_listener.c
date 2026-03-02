@@ -21,7 +21,7 @@ static BleServiceBattery* battery_svc = NULL;
 #include <furi_hal_vibro.h>
 #include "gui_manager.h"
 
-// --- MOMENTUM OPTIMIZED V2 ---
+// --- MOMENTUM TRUE IDENTITY SPOOF ---
 
 static FuriHalBleProfileBase* ble_profile_serial_momentum_start(FuriHalBleProfileParams profile_params) {
     return ble_profile_serial->start(profile_params);
@@ -32,16 +32,24 @@ static void ble_profile_serial_momentum_stop(FuriHalBleProfileBase* profile) {
 }
 
 static void ble_profile_serial_momentum_get_config(GapConfig* config, FuriHalBleProfileParams profile_params) {
-    // 1. Get standard NUS (Nordic UART Service) config
     ble_profile_serial->get_gap_config(config, profile_params);
     
-    // 2. Override Name with HID_ prefix (Safely)
-    // We preserve the first byte which is the BLE AD Type (0x09 for Local Name)
-    uint8_t ad_type = config->adv_name[0];
+    // 1. NAME OVERRIDE: HID_[Name]
     char custom_name[FURI_HAL_VERSION_DEVICE_NAME_LENGTH];
     snprintf(custom_name, sizeof(custom_name), "HID_%s", furi_hal_version_get_name_ptr());
     strlcpy(config->adv_name + 1, custom_name, sizeof(config->adv_name) - 1);
-    config->adv_name[0] = ad_type;
+    config->adv_name[0] = 0x09; // AD_TYPE_COMPLETE_LOCAL_NAME
+
+    // 2. MAC OVERRIDE: Must be Unicast! (Bit 0 of Byte 0 must be 0)
+    // We follow Momentum's BadKB logic exactly.
+    config->mac_address[2]++;
+    uint16_t mac_xor = 0x0002; 
+    config->mac_address[0] ^= (mac_xor & 0xFF);
+    config->mac_address[1] ^= (mac_xor >> 8);
+    
+    // 3. MOMENTUM PARAMS
+    config->bonding_mode = true;
+    config->pairing_method = GapPairingPinCodeVerifyYesNo;
 }
 
 static const FuriHalBleProfileTemplate profile_momentum_callbacks = {
@@ -51,6 +59,8 @@ static const FuriHalBleProfileTemplate profile_momentum_callbacks = {
 };
 
 static const FuriHalBleProfileTemplate* ble_profile_momentum = &profile_momentum_callbacks;
+
+// ---------------------------------
 
 static uint16_t BleSerialCallback(SerialServiceEvent event, void* context) {
   if (event.event == SerialServiceEventTypeDataReceived) {
@@ -79,6 +89,12 @@ int FlipperBleListenerStart(void* gui_manager) {
   bt_system = furi_record_open(RECORD_BT);
   bt_disconnect(bt_system);
   furi_delay_ms(500);
+
+  // Use app data path for keys to ensure a clean slate for the new identity
+  Storage* storage = furi_record_open(RECORD_STORAGE);
+  storage_common_mkdir(storage, EXT_PATH("apps_data/flipper_kb"));
+  furi_record_close(RECORD_STORAGE);
+  bt_keys_storage_set_storage_path(bt_system, EXT_PATH("apps_data/flipper_kb/.bt_hid.keys"));
 
   ble_profile = bt_profile_start(bt_system, ble_profile_momentum, NULL);
   if (ble_profile == NULL) {
@@ -114,6 +130,8 @@ int FlipperBleListenerStop(void) {
       battery_svc = NULL;
   }
   if (ble_profile == NULL) return 0;
+  
+  bt_keys_storage_set_default_path(bt_system);
   bt_profile_restore_default(bt_system);
   furi_record_close(RECORD_BT);
   if (rpc_session_blocker) { rpc_session_close(rpc_session_blocker); rpc_session_blocker = NULL; }
