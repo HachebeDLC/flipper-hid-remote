@@ -1,9 +1,13 @@
 App(
-    appid="flipper_kb",
+    appid="flipper_hid_remote",
     name="HID Remote",
     apptype=FlipperAppType.EXTERNAL,
     entry_point="flipper_kb_app",
     stack_size=4 * 1024,
     fap_category="USB",
-    fap_description="USB Mouse and Keyboard controlled via BLE",
+    fap_version="1.0",
+    fap_icon="icon_10.png",
+    fap_description="USB Mouse and Keyboard bridge controlled via Web Bluetooth.",
+    fap_author="HachebeDLC",
+    fap_weburl="https://flipper-hid-remote.netlify.app/",
 )
