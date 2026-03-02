@@ -9,26 +9,10 @@
   "theme_color": "#ff8c00",
   "icons": [
     {
-      "src": "/icon.svg",
+      "src": "icon.svg",
       "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "any maskable"
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "/index.html",
-      "sizes": "1280x720",
-      "type": "text/html",
-      "form_factor": "wide",
-      "label": "Desktop View"
-    },
-    {
-      "src": "/index.html",
-      "sizes": "720x1280",
-      "type": "text/html",
-      "form_factor": "narrow",
-      "label": "Mobile View"
     }
   ]
 }
