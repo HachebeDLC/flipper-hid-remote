@@ -18,3 +18,6 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [x] **Track: Quality of Life Improvements v2** (completed)
   *Link: [./archive/qol_v2_20260301/](./archive/qol_v2_20260301/)*
+
+- [ ] **Track: Website Deployment and Mobile Compatibility**
+  *Link: [./tracks/deployment_20260301/](./tracks/deployment_20260301/)*
