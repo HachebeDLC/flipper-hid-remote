@@ -7,12 +7,12 @@ let flipperRxCharacteristic = null;
 
 async function connectToFlipper() {
     try {
-        console.log('Searching for Flipper devices...');
+        console.log('Searching for Flipper devices (Aonon/flip_)...');
         
-        // This filter is much more reliable as it uses the official Flipper service
         const device = await navigator.bluetooth.requestDevice({
             filters: [
-                { services: [FLIPPER_SERIAL_SERVICE_UUID] }
+                { name: 'Aonon' },
+                { namePrefix: 'flip_' }
             ],
             optionalServices: [FLIPPER_SERIAL_SERVICE_UUID, 'battery_service']
         });
