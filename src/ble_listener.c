@@ -12,8 +12,6 @@
 #include <rpc/rpc.h>
 #include <storage/storage.h>
 
-#define TAG "BleListener"
-
 static FuriHalBleProfileBase* ble_profile = NULL;
 static Bt* bt_system = NULL;
 void* app_gui_manager = NULL;
@@ -25,7 +23,7 @@ static BleServiceBattery* battery_svc = NULL;
 #include <furi_hal_vibro.h>
 #include "gui_manager.h"
 
-// --- MOMENTUM PRO IDENTITY ---
+// --- MOMENTUM PERSISTENT IDENTITY ---
 
 static uint16_t BleSerialCallback(SerialServiceEvent event, void* context) {
   if (event.event == SerialServiceEventTypeDataReceived) {
@@ -55,16 +53,20 @@ static void ble_profile_serial_momentum_stop(FuriHalBleProfileBase* profile) {
 static void ble_profile_serial_momentum_get_config(GapConfig* config, FuriHalBleProfileParams profile_params) {
     ble_profile_serial->get_gap_config(config, profile_params);
     
+    // 1. IDENTITY: HID_[Name]
     char custom_name[FURI_HAL_VERSION_DEVICE_NAME_LENGTH];
     snprintf(custom_name, sizeof(custom_name), "HID_%s", furi_hal_version_get_name_ptr());
     strlcpy(config->adv_name + 1, custom_name, sizeof(config->adv_name) - 1);
     config->adv_name[0] = 0x09;
 
-    config->mac_address[2]++;
+    // 2. MAC: FIXED SPOOF (Does not increment, so pairing sticks)
+    // We use a fixed XOR to create a unique but stable MAC for this app.
+    config->mac_address[2] ^= 0x01; 
     uint16_t mac_xor = 0x0002; 
     config->mac_address[0] ^= (mac_xor & 0xFF);
     config->mac_address[1] ^= (mac_xor >> 8);
     
+    // 3. SECURITY: Standard PIN for stable data channel
     config->bonding_mode = true;
     config->pairing_method = GapPairingPinCodeShow;
 }
@@ -86,18 +88,15 @@ int FlipperBleListenerStart(void* gui_manager) {
   
   bt_system = furi_record_open(RECORD_BT);
   bt_disconnect(bt_system);
-  furi_delay_ms(400);
+  furi_delay_ms(500);
 
-  // MOMENTUM FIX: Ensure apps_data folder exists
+  // Use app data path for keys so this app has its own "memory" of paired devices
   Storage* storage = furi_record_open(RECORD_STORAGE);
   storage_common_mkdir(storage, EXT_PATH("apps_data/flipper_kb"));
   furi_record_close(RECORD_STORAGE);
-
-  // IDENTITY STABILITY: Set path and FORGET existing bonds for this identity
-  // This prevents the security manager crash.
   bt_keys_storage_set_storage_path(bt_system, EXT_PATH("apps_data/flipper_kb/.bt_hid.keys"));
-  bt_forget_bonded_devices(bt_system);
-  furi_delay_ms(200);
+
+  // REMOVED: bt_forget_bonded_devices - We want it to remember us!
 
   ble_profile = bt_profile_start(bt_system, ble_profile_momentum, NULL);
   if (ble_profile == NULL) {
