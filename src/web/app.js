@@ -1,23 +1,26 @@
-// Flipper Zero Web Bluetooth implementation
-
-const FLIPPER_SERIAL_SERVICE_UUID = '8fe5b3d5-2e7f-4a98-2a48-7acc60fe0000';
-const FLIPPER_SERIAL_RX_UUID = '19ed82ae-ed21-4c9d-4145-228e62fe0000'; // Write to Flipper
-const FLIPPER_SERIAL_TX_UUID = '19ed82ae-ed21-4c9d-4145-228e61fe0000'; // Read from Flipper
+// Flipper Zero Official Serial Service UUIDs (Nordic UART)
+const FLIPPER_SERIAL_SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
+const FLIPPER_SERIAL_RX_UUID = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'; // Write
+const FLIPPER_SERIAL_TX_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'; // Read
 
 let flipperRxCharacteristic = null;
 
 async function connectToFlipper() {
     try {
-        console.log('Searching for Flipper...');
+        console.log('Searching for Flipper devices...');
+        
+        // This filter is much more reliable as it uses the official Flipper service
         const device = await navigator.bluetooth.requestDevice({
-            acceptAllDevices: true,
-            optionalServices: [FLIPPER_SERIAL_SERVICE_UUID]
+            filters: [
+                { services: [FLIPPER_SERIAL_SERVICE_UUID] }
+            ],
+            optionalServices: [FLIPPER_SERIAL_SERVICE_UUID, 'battery_service']
         });
 
         console.log(`Found: ${device.name}. Connecting...`);
         const server = await device.gatt.connect();
 
-        console.log('GATT Connected. Fetching services...');
+        console.log('Fetching Serial Service...');
         const service = await server.getPrimaryService(FLIPPER_SERIAL_SERVICE_UUID);
 
         console.log('Getting Characteristics...');
@@ -32,73 +35,46 @@ async function connectToFlipper() {
 }
 
 async function sendData(data) {
-    if (!flipperRxCharacteristic) {
-        console.error('Not connected!');
-        return;
-    }
-    // No more manual Protobuf framing, just raw bytes as we had in Turn 103
-    if (flipperRxCharacteristic.properties.writeWithoutResponse) {
+    if (!flipperRxCharacteristic) return;
+    try {
         await flipperRxCharacteristic.writeValueWithoutResponse(data);
-    } else {
+    } catch (e) {
+        console.warn("Retrying with response...");
         await flipperRxCharacteristic.writeValue(data);
     }
 }
 
 async function sendKeyToFlipper(key) {
-    console.log(`Sending RAW HID packet for key "${key}"...`);
     const data = new Uint8Array([0x01, key.charCodeAt(0)]);
     await sendData(data);
 }
 
 async function sendKeyDownToFlipper(hidCode) {
-    console.log(`Sending Key Down: 0x${hidCode.toString(16)}`);
     const data = new Uint8Array([0x03, hidCode]);
     await sendData(data);
 }
 
 async function sendKeyUpToFlipper(hidCode) {
-    console.log(`Sending Key Up: 0x${hidCode.toString(16)}`);
     const data = new Uint8Array([0x04, hidCode]);
     await sendData(data);
 }
 
 async function sendModifiersToFlipper(mask) {
-    console.log(`Sending Modifiers: 0x${mask.toString(16)}`);
     const data = new Uint8Array([0x05, mask]);
     await sendData(data);
 }
 
 async function sendMousePosToFlipper(dx, dy) {
-    // Clamp to signed 8-bit range (-127 to 127)
-    dx = Math.max(-127, Math.min(127, dx));
-    dy = Math.max(-127, Math.min(127, dy));
-    console.log(`Sending Mouse: ${dx}, ${dy}`);
     const data = new Uint8Array([0x02, dx & 0xFF, dy & 0xFF]);
     await sendData(data);
 }
 
 async function sendMouseButtonToFlipper(mask) {
-    console.log(`Sending Mouse Button: 0x${mask.toString(16)}`);
     const data = new Uint8Array([0x06, mask]);
     await sendData(data);
 }
 
 async function sendMouseScrollToFlipper(delta) {
-    // delta: -127 to 127
     const data = new Uint8Array([0x07, delta & 0xFF]);
     await sendData(data);
-}
-
-// Export for testing
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { 
-        connectToFlipper, 
-        sendKeyToFlipper,
-        sendKeyDownToFlipper,
-        sendKeyUpToFlipper,
-        sendModifiersToFlipper,
-        sendMousePosToFlipper,
-        sendMouseButtonToFlipper,
-        __setMockCharacteristic: (mock) => { flipperRxCharacteristic = mock; }
-    };
 }
