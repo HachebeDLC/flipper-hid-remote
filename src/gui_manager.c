@@ -167,6 +167,7 @@ GuiManager* GuiManagerAlloc(void) {
   manager->gui = furi_record_open(RECORD_GUI);
   manager->dialogs = furi_record_open(RECORD_DIALOGS);
   manager->view_dispatcher = view_dispatcher_alloc();
+  view_dispatcher_enable_queue(manager->view_dispatcher);
   view_dispatcher_attach_to_gui(manager->view_dispatcher, manager->gui, ViewDispatcherTypeFullscreen);
   view_dispatcher_set_event_callback_context(manager->view_dispatcher, manager);
   view_dispatcher_set_custom_event_callback(manager->view_dispatcher, CustomEventCallback);
