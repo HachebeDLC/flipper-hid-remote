@@ -42,6 +42,10 @@ ufbt launch
 4. Click **Connect**. Your device should appear as **HID_[YourName]**.
 5. Control your computer!
 
+## Miscallaneous
+
+- Documentation for the bluetooth communication protocol can be found in [README-protocol.md](README-protocol.md).
+
 ## Privacy & Security
 
 - **Zero-Install**: No app store downloads required.
